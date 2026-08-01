@@ -274,11 +274,11 @@ class _AccountCard extends StatelessWidget {
                 const SizedBox(height: 14),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.green,
-                    foregroundColor: AppColors.ink,
+                    backgroundColor: context.palette.accent,
+                    foregroundColor: context.palette.onAccent,
                   ),
                   onPressed: busy ? null : onConnect,
-                  icon: const Icon(Icons.cloud_outlined),
+                  icon: const Icon(Icons.cloud_rounded),
                   label: const Text('Connect Google'),
                 ),
               ],
@@ -290,15 +290,15 @@ class _AccountCard extends StatelessWidget {
                   width: 44,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.greenSoft,
+                    color: context.palette.accentSoft,
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: (account!.photoUrl != null)
                       ? Image.network(account!.photoUrl!,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Center(
-                              child: Icon(Icons.person, color: context.ink)))
-                      : Center(child: Icon(Icons.person, color: context.ink)),
+                              child: Icon(Icons.person_rounded, color: context.ink)))
+                      : Center(child: Icon(Icons.person_rounded, color: context.ink)),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -344,10 +344,10 @@ class _StatusCard extends StatelessWidget {
             ? 'Never backed up yet'
             : 'Last backup · ${_relativeTime(last)}';
     final icon = busy
-        ? Icons.cloud_sync_outlined
+        ? Icons.cloud_sync_rounded
         : last == null
-            ? Icons.cloud_off_outlined
-            : Icons.cloud_done_outlined;
+            ? Icons.cloud_off_rounded
+            : Icons.cloud_done_rounded;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -361,14 +361,14 @@ class _StatusCard extends StatelessWidget {
             width: 44,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.greenSoft,
+              color: context.palette.accentSoft,
               borderRadius: BorderRadius.circular(12),
             ),
             child: XSwitcher(
               duration: AppMotion.fast,
               child: Icon(icon,
                   key: ValueKey(icon.codePoint),
-                  color: AppColors.ink,
+                  color: context.palette.onAccentSoft,
                   size: 22),
             ),
           ),
@@ -400,7 +400,7 @@ class _BackupWarning extends StatelessWidget {
         ? 'Your Google Drive backup is newer than this device. '
             'Auto-backup is paused to avoid overwriting it — restore to sync up.'
         : (prefs.lastError ?? 'Last automatic backup failed.');
-    final color = isConflict ? AppColors.green : AppColors.danger;
+    final color = isConflict ? context.palette.accent : context.palette.dangerContent;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -416,8 +416,8 @@ class _BackupWarning extends StatelessWidget {
             children: [
               Icon(
                   isConflict
-                      ? Icons.cloud_sync_outlined
-                      : Icons.error_outline,
+                      ? Icons.cloud_sync_rounded
+                      : Icons.error_outline_rounded,
                   size: 18,
                   color: color),
               const SizedBox(width: 8),
@@ -434,13 +434,13 @@ class _BackupWarning extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.green,
-                  foregroundColor: AppColors.ink,
+                  backgroundColor: context.palette.accent,
+                  foregroundColor: context.palette.onAccent,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 ),
                 onPressed: onRestore,
-                icon: const Icon(Icons.cloud_download_outlined, size: 18),
+                icon: const Icon(Icons.cloud_download_rounded, size: 18),
                 label: const Text('Restore'),
               ),
             ),
@@ -475,7 +475,7 @@ class _Toggles extends ConsumerWidget {
         children: [
           SwitchListTile.adaptive(
             value: prefs.enabled,
-            activeThumbColor: AppColors.green,
+            activeThumbColor: context.palette.accent,
             title: Text('Auto-backup',
                 style: AppTextStyles.body
                     .copyWith(color: context.ink, fontWeight: FontWeight.w600)),
@@ -488,7 +488,7 @@ class _Toggles extends ConsumerWidget {
           Divider(height: 1, color: context.hairline),
           SwitchListTile.adaptive(
             value: prefs.wifiOnly,
-            activeThumbColor: AppColors.green,
+            activeThumbColor: context.palette.accent,
             title: Text('Wi-Fi only',
                 style: AppTextStyles.body.copyWith(
                     color: prefs.enabled ? context.ink : context.inkSubtle,
@@ -526,17 +526,17 @@ class _Actions extends StatelessWidget {
         Expanded(
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.green,
-              foregroundColor: AppColors.ink,
+              backgroundColor: context.palette.accent,
+              foregroundColor: context.palette.onAccent,
             ),
             onPressed: busy ? null : onBackup,
             icon: busy
-                ? const SizedBox(
+                ? SizedBox(
                     height: 16,
                     width: 16,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.black))
-                : const Icon(Icons.cloud_upload_outlined),
+                        strokeWidth: 2, color: context.palette.onAccent))
+                : const Icon(Icons.cloud_upload_rounded),
             label: const Text('Back up now'),
           ),
         ),
@@ -544,7 +544,7 @@ class _Actions extends StatelessWidget {
         Expanded(
           child: OutlinedButton.icon(
             onPressed: busy ? null : onRestore,
-            icon: const Icon(Icons.cloud_download_outlined),
+            icon: const Icon(Icons.cloud_download_rounded),
             label: const Text('Restore'),
           ),
         ),
@@ -559,18 +559,18 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.greenSoft,
+        color: context.palette.accentSoft,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Icon(Icons.lock_outline, size: 16, color: AppColors.ink),
+            Icon(Icons.lock_outline_rounded, size: 16, color: context.palette.onAccentSoft),
             const SizedBox(width: 6),
             Text('Private app folder',
                 style: AppTextStyles.title.copyWith(
-                    color: AppColors.ink, fontWeight: FontWeight.w700)),
+                    color: context.palette.onAccentSoft, fontWeight: FontWeight.w700)),
           ]),
           const SizedBox(height: 6),
           Text(
@@ -578,7 +578,7 @@ class _InfoCard extends StatelessWidget {
             "Only this app can read them — they don't appear in Drive's UI "
             "and don't count toward visible storage.",
             style: AppTextStyles.caption.copyWith(
-                color: AppColors.ink.withValues(alpha: 0.75), height: 1.5),
+                color: context.palette.onAccentSoft.withValues(alpha: 0.75), height: 1.5),
           ),
           const SizedBox(height: 8),
           GestureDetector(
@@ -588,7 +588,7 @@ class _InfoCard extends StatelessWidget {
                 mode: LaunchMode.externalApplication),
             child: Text('Learn more',
                 style: AppTextStyles.caption.copyWith(
-                    color: AppColors.ink,
+                    color: context.palette.onAccentSoft,
                     fontWeight: FontWeight.w700,
                     decoration: TextDecoration.underline)),
           ),
@@ -617,11 +617,11 @@ class _RestoreSheet extends StatelessWidget {
               width: 56,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppColors.greenSoft,
+                color: context.palette.accentSoft,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.cloud_done_outlined,
-                  color: AppColors.ink, size: 28),
+              child: Icon(Icons.cloud_done_rounded,
+                  color: context.palette.onAccentSoft, size: 28),
             ),
             const SizedBox(height: 16),
             Text('We found a backup',
@@ -646,10 +646,10 @@ class _RestoreSheet extends StatelessWidget {
             const SizedBox(height: 16),
             FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.green,
-                foregroundColor: AppColors.ink,
+                backgroundColor: context.palette.accent,
+                foregroundColor: context.palette.onAccent,
               ),
-              icon: const Icon(Icons.cloud_download_outlined),
+              icon: const Icon(Icons.cloud_download_rounded),
               label: const Text('Restore'),
               onPressed: () => Navigator.pop(context, true),
             ),
@@ -724,8 +724,8 @@ class _DisplayNameCardState extends ConsumerState<_DisplayNameCard> {
                 final dirty = v.text.trim() != _saved;
                 return FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.green,
-                    foregroundColor: AppColors.ink,
+                    backgroundColor: context.palette.accent,
+                    foregroundColor: context.palette.onAccent,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
                   ),

@@ -236,7 +236,7 @@ class _ActiveSearchChip extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 132),
           padding: const EdgeInsets.only(left: 10, right: 4),
           decoration: BoxDecoration(
-            color: AppColors.greenSoft,
+            color: context.palette.accentSoft,
             borderRadius: BorderRadius.circular(AppRadii.pill),
           ),
           child: Row(

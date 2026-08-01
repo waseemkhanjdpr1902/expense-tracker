@@ -53,7 +53,7 @@ class SearchResultRow extends StatelessWidget {
               height: 44,
               width: 44,
               decoration: BoxDecoration(
-                color: tint ? AppColors.greenSoft : Colors.transparent,
+                color: tint ? context.palette.accentSoft : Colors.transparent,
                 borderRadius: BorderRadius.circular(AppRadii.chip),
                 border: Border.all(color: context.hairline),
               ),

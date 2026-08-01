@@ -94,8 +94,8 @@ class _ProjectFormPageState extends ConsumerState<ProjectFormPage> {
               child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.green,
-              foregroundColor: AppColors.ink,
+              backgroundColor: context.palette.accent,
+              foregroundColor: context.palette.onAccent,
             ),
             onPressed: () => Navigator.pop(ctx, inputText.trim()),
             child: const Text('Add'),
@@ -262,8 +262,8 @@ class _ProjectFormPageState extends ConsumerState<ProjectFormPage> {
             const SizedBox(height: 32),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.green,
-                foregroundColor: AppColors.ink,
+                backgroundColor: context.palette.accent,
+                foregroundColor: context.palette.onAccent,
               ),
               onPressed: _save,
               child: Text(_isEdit ? 'Save changes' : 'Create project'),
@@ -340,7 +340,7 @@ class _DateTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_outlined,
+            Icon(Icons.calendar_today_rounded,
                 size: 18, color: context.inkSubtle),
             const SizedBox(width: 12),
             Expanded(
@@ -356,7 +356,7 @@ class _DateTile extends StatelessWidget {
             if (onClear != null)
               GestureDetector(
                 onTap: onClear,
-                child: Icon(Icons.close, size: 18, color: context.inkSubtle),
+                child: Icon(Icons.close_rounded, size: 18, color: context.inkSubtle),
               ),
           ],
         ),

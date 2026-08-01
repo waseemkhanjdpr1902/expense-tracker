@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/hero.dart';
 import '../../../core/currency.dart';
 import '../../../core/date_range.dart';
 import '../../../core/formatters.dart';
@@ -197,8 +198,8 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
                     child: Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.green,
+                      decoration: BoxDecoration(
+                        color: context.palette.accent,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -207,17 +208,19 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add_rounded),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => const ProjectFormPage(),
             )),
           ),
         ],
       ),
-      body: SafeArea(
+      body: HeroScope(
+        name: 'projects',
+        child: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          color: AppColors.green,
+          color: context.palette.accent,
           onRefresh: () async {
             ref.invalidate(projectsProvider);
             ref.invalidate(receivedByProjectProvider);
@@ -245,7 +248,7 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.folder_outlined,
+                              Icon(Icons.folder_rounded,
                                   size: 56, color: context.inkSubtle),
                               const SizedBox(height: 16),
                               Text('No projects yet',
@@ -275,7 +278,7 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.folder_off_outlined,
+                            Icon(Icons.folder_off_rounded,
                                 size: 48, color: context.inkSubtle),
                             const SizedBox(height: 12),
                             Text('No projects match',
@@ -309,21 +312,21 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
                   if (i == 0) {
                     return SummaryBoard(
                       left: BoardStat(
-                        icon: Icons.account_balance_wallet_outlined,
+                        icon: Icons.account_balance_wallet_rounded,
                         color: context.ink,
                         label: 'Budget',
                         value: formatMoney(budget, currency),
                       ),
                       middle: BoardStat(
                         icon: Icons.arrow_downward_rounded,
-                        color: AppColors.green,
+                        color: context.palette.accent,
                         label: 'Received',
                         value: formatMoney(receivedTotal, currency),
                       ),
                       rightLabel: 'Remaining',
                       rightValue: formatMoney(remaining, currency),
                       rightColor: remaining <= 0
-                          ? AppColors.green
+                          ? context.palette.accent
                           : context.ink,
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
                     );
@@ -359,6 +362,7 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
             },
           ),
           ),
+        ),
         ),
       ),
     );
@@ -436,7 +440,7 @@ class _CardShell extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.greenSoft,
+                      color: context.palette.accentSoft,
                       borderRadius: BorderRadius.circular(100),
                     ),
                     child: Text(catName!,
@@ -455,7 +459,7 @@ class _CardShell extends StatelessWidget {
                 minHeight: 6,
                 backgroundColor: context.hairline,
                 valueColor:
-                    const AlwaysStoppedAnimation<Color>(AppColors.green),
+                    AlwaysStoppedAnimation<Color>(context.palette.accent),
               ),
             ),
             const SizedBox(height: 10),
@@ -465,7 +469,7 @@ class _CardShell extends StatelessWidget {
                 Text(
                   '${formatMoney(paidMinor, currency)} paid',
                   style: AppTextStyles.caption.copyWith(
-                      color: isDone ? AppColors.green : context.inkMuted),
+                      color: isDone ? context.palette.accent : context.inkMuted),
                 ),
                 Text(
                   'of ${formatMoney(project.totalAmountMinor, currency)}',
@@ -481,7 +485,7 @@ class _CardShell extends StatelessWidget {
               child: Text(
                 remainingLabel,
                 style: AppTextStyles.caption.copyWith(
-                  color: remaining <= 0 ? AppColors.green : context.inkMuted,
+                  color: remaining <= 0 ? context.palette.accent : context.inkMuted,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
@@ -595,8 +599,8 @@ class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
               child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.green,
-              foregroundColor: AppColors.ink,
+              backgroundColor: context.palette.accent,
+              foregroundColor: context.palette.onAccent,
             ),
             onPressed: () => Navigator.pop(ctx, inputText.trim()),
             child: const Text('Add'),
@@ -922,7 +926,7 @@ class _AddChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add, size: 14, color: context.inkSubtle),
+            Icon(Icons.add_rounded, size: 14, color: context.inkSubtle),
             const SizedBox(width: 4),
             Text(
               'Add',
@@ -965,7 +969,7 @@ class _DateTile extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.calendar_today_outlined,
+                Icon(Icons.calendar_today_rounded,
                     size: 14, color: context.inkSubtle),
                 const SizedBox(width: 6),
                 Text(

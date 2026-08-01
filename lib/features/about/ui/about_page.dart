@@ -28,14 +28,14 @@ class _Link {
 }
 
 const _links = <_Link>[
-  _Link(Icons.code, 'GitHub', '@saranzafar',
+  _Link(Icons.code_rounded, 'GitHub', '@saranzafar',
       'https://github.com/saranzafar'),
-  _Link(Icons.work_outline, 'LinkedIn', 'in/saranzafar',
+  _Link(Icons.work_outline_rounded, 'LinkedIn', 'in/saranzafar',
       'https://www.linkedin.com/in/saranzafar'),
-  _Link(Icons.camera_alt_outlined, 'Instagram', '@saran.devvv',
+  _Link(Icons.camera_alt_rounded, 'Instagram', '@saran.devvv',
       'https://www.instagram.com/saran.devvv/'),
-  _Link(Icons.public, 'Website', 'saranzafar.com', 'https://saranzafar.com'),
-  _Link(Icons.mail_outline, 'Email', 'saran.development@gmail.com',
+  _Link(Icons.public_rounded, 'Website', 'saranzafar.com', 'https://saranzafar.com'),
+  _Link(Icons.mail_outline_rounded, 'Email', 'saran.development@gmail.com',
       'mailto:saran.development@gmail.com'),
 ];
 
@@ -159,9 +159,9 @@ class _HeaderCard extends StatelessWidget {
             width: 64,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.greenSoft,
+              color: context.palette.accentSoft,
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.green, width: 1.5),
+              border: Border.all(color: context.palette.accent, width: 1.5),
             ),
             child: Text(_initials,
                 style: AppTextStyles.headline
@@ -183,12 +183,12 @@ class _HeaderCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.greenSoft,
+                    color: context.palette.accentSoft,
                     borderRadius: BorderRadius.circular(100),
                   ),
                   child: Text('Open to collaboration',
                       style: AppTextStyles.caption.copyWith(
-                          color: AppColors.ink,
+                          color: context.palette.onAccentSoft,
                           fontWeight: FontWeight.w700)),
                 ),
               ],
@@ -262,7 +262,7 @@ class _LinkTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.open_in_new, size: 18, color: context.inkSubtle),
+            Icon(Icons.open_in_new_rounded, size: 18, color: context.inkSubtle),
           ],
         ),
       ),
@@ -273,22 +273,25 @@ class _LinkTile extends StatelessWidget {
 class _RepoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // Matches the Home hero: a dark surface in both themes, with every
+    // foreground derived from onHero rather than assuming white-on-black.
+    final p = context.palette;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(20),
+        color: p.heroSurface,
+        borderRadius: BorderRadius.circular(AppRadii.card),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.terminal, size: 18, color: AppColors.green),
+              Icon(Icons.terminal_rounded, size: 18, color: context.palette.accent),
               const SizedBox(width: 6),
               Text('Source code',
                   style: AppTextStyles.caption.copyWith(
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: p.onHero.withValues(alpha: 0.7),
                       fontWeight: FontWeight.w600)),
             ],
           ),
@@ -296,20 +299,20 @@ class _RepoCard extends StatelessWidget {
           Text(
               'expense-tracker-flutter-mobile-app',
               style: AppTextStyles.title
-                  .copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                  .copyWith(color: p.onHero, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text('Open source · MIT-style',
               style: AppTextStyles.caption.copyWith(
-                  color: Colors.white.withValues(alpha: 0.6))),
+                  color: p.onHero.withValues(alpha: 0.6))),
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.green,
-                foregroundColor: AppColors.ink,
+                backgroundColor: context.palette.accent,
+                foregroundColor: context.palette.onAccent,
               ),
-              icon: const Icon(Icons.code),
+              icon: const Icon(Icons.code_rounded),
               label: const Text('View on GitHub'),
               onPressed: () => _open(context, _repoUrl),
             ),

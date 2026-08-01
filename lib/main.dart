@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
@@ -8,6 +9,9 @@ import 'features/backup/data/backup_prefs.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Draw behind the status and navigation bars; the palette supplies the
+  // icon brightness for each theme (see AppPalette.overlayStyle).
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   final settingsRepo = SettingsRepo();
   final backupRepo = BackupPrefsRepo();
   final themeMode = await settingsRepo.readThemeMode();

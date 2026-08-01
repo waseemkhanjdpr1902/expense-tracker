@@ -30,7 +30,7 @@ class SettingsPage extends ConsumerWidget {
           children: [
             _Section(title: 'Appearance', children: [
               _Tile(
-                icon: Icons.brightness_6_outlined,
+                icon: Icons.brightness_6_rounded,
                 title: 'Theme',
                 subtitle: _themeLabel(mode),
                 onTap: () => _openThemeSheet(context, ref, mode),
@@ -39,7 +39,7 @@ class SettingsPage extends ConsumerWidget {
             const SizedBox(height: 16),
             _Section(title: 'Money', children: [
               _Tile(
-                icon: Icons.payments_outlined,
+                icon: Icons.payments_rounded,
                 title: 'Currency',
                 subtitle: '${currency.code} · ${currency.symbol}',
                 trailing: Text(currency.flag,
@@ -47,7 +47,7 @@ class SettingsPage extends ConsumerWidget {
                 onTap: () => _openCurrencySheet(context, ref, currency),
               ),
               _Tile(
-                icon: Icons.label_outlined,
+                icon: Icons.sell_rounded,
                 title: 'Categories',
                 subtitle: 'Add, rename or delete categories',
                 onTap: () => Navigator.of(context).push(
@@ -58,7 +58,7 @@ class SettingsPage extends ConsumerWidget {
             const SizedBox(height: 16),
             _Section(title: 'Sync', children: [
               _Tile(
-                icon: Icons.cloud_outlined,
+                icon: Icons.cloud_rounded,
                 title: 'Backup',
                 subtitle: 'Google Drive · optional',
                 onTap: () => Navigator.of(context).push(
@@ -69,7 +69,7 @@ class SettingsPage extends ConsumerWidget {
             const SizedBox(height: 16),
             _Section(title: 'About', children: [
               _Tile(
-                icon: Icons.person_outline,
+                icon: Icons.person_outline_rounded,
                 title: 'About',
                 subtitle: 'Author · links · source',
                 onTap: () => Navigator.of(context).push(
@@ -77,7 +77,7 @@ class SettingsPage extends ConsumerWidget {
                 ),
               ),
               _Tile(
-                  icon: Icons.info_outline,
+                  icon: Icons.info_outline_rounded,
                   title: 'App version',
                   subtitle: ref.watch(appVersionProvider).maybeWhen(
                         data: (v) => 'v$v',
@@ -88,20 +88,20 @@ class SettingsPage extends ConsumerWidget {
             _Section(title: 'Developer', children: [
               if (kDebugMode)
                 _Tile(
-                  icon: Icons.science_outlined,
+                  icon: Icons.science_rounded,
                   title: 'Load demo data',
                   subtitle: '~6 months of sample records, loans and projects',
                   onTap: () => _loadDemoData(context, ref),
                 ),
               if (kDebugMode)
                 _Tile(
-                  icon: Icons.delete_sweep_outlined,
+                  icon: Icons.delete_sweep_rounded,
                   title: 'Clear all data',
                   subtitle: 'Wipe every record, loan, project and category',
                   onTap: () => _clearAllData(context, ref),
                 ),
               _Tile(
-                icon: Icons.refresh,
+                icon: Icons.refresh_rounded,
                 title: 'Reset onboarding',
                 subtitle: 'Show intro screens again next launch',
                 onTap: () async {
@@ -193,7 +193,7 @@ Future<bool> _confirm(
           child: Text(
             action,
             style: destructive
-                ? const TextStyle(color: AppColors.danger)
+                ? TextStyle(color: context.palette.dangerContent)
                 : null,
           ),
         ),
@@ -240,9 +240,9 @@ Future<void> _openThemeSheet(
                 delay: Duration(milliseconds: 40 * i),
                 child: _ChoiceTile(
                   icon: [
-                    Icons.light_mode_outlined,
-                    Icons.dark_mode_outlined,
-                    Icons.brightness_auto_outlined,
+                    Icons.light_mode_rounded,
+                    Icons.dark_mode_rounded,
+                    Icons.brightness_auto_rounded,
                   ][i],
                   title: _themeLabel([
                     ThemeMode.light,
@@ -403,7 +403,7 @@ class _Tile extends StatelessWidget {
             ),
             if (trailing != null) trailing!,
             if (trailing == null && onTap != null)
-              Icon(Icons.chevron_right, color: context.inkSubtle),
+              Icon(Icons.chevron_right_rounded, color: context.inkSubtle),
           ],
         ),
       ),
@@ -438,10 +438,10 @@ class _ChoiceTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           border: Border.all(
-              color: selected ? AppColors.green : context.hairline,
+              color: selected ? context.palette.accent : context.hairline,
               width: selected ? 1.5 : 1),
           borderRadius: BorderRadius.circular(16),
-          color: selected ? AppColors.greenSoft : Colors.transparent,
+          color: selected ? context.palette.accentSoft : Colors.transparent,
         ),
         child: Row(
           children: [
@@ -471,9 +471,9 @@ class _ChoiceTile extends StatelessWidget {
             XSwitcher(
               duration: AppMotion.fast,
               child: selected
-                  ? const Icon(Icons.check_circle,
+                  ? Icon(Icons.check_circle_rounded,
                       key: ValueKey('check'),
-                      color: AppColors.green,
+                      color: context.palette.accent,
                       size: 22)
                   : const SizedBox(key: ValueKey('nocheck'), width: 22),
             ),

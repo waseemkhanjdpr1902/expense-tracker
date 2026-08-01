@@ -126,7 +126,7 @@ class _PixelCatState extends State<PixelCat> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final body = context.ink;
+    final body = context.palette.mascotBody;
     return SizedBox(
       width: widget.size,
       height: widget.size,
@@ -136,8 +136,8 @@ class _PixelCatState extends State<PixelCat> with TickerProviderStateMixin {
           return CustomPaint(
             painter: _CatPainter(
               body: body,
-              accent: AppColors.green,
-              danger: AppColors.danger,
+              accent: context.palette.accent,
+              danger: context.palette.dangerContent,
               t: _idle.value,
               mood: widget.mood,
               reaction: widget.reaction,

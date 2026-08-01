@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/motion.dart';
@@ -22,7 +23,14 @@ class XpenseApp extends ConsumerWidget {
       themeMode: mode,
       themeAnimationDuration: AppMotion.med,
       themeAnimationCurve: AppMotion.enter,
-      home: const _RootGate(),
+      // AppBarTheme covers pages that have an AppBar; this covers the ones
+      // that don't — splash, onboarding and the search overlay.
+      home: Builder(
+        builder: (context) => AnnotatedRegion<SystemUiOverlayStyle>(
+          value: context.palette.overlayStyle,
+          child: const _RootGate(),
+        ),
+      ),
     );
   }
 }

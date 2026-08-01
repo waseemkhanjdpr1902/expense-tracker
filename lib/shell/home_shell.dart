@@ -140,11 +140,11 @@ class _HomeShellState extends ConsumerState<HomeShell>
   ];
 
   static const _items = <_NavItem>[
-    _NavItem('Home', Icons.home_outlined, Icons.home),
-    _NavItem('Records', Icons.receipt_long_outlined, Icons.receipt_long),
-    _NavItem('Loans', Icons.handshake_outlined, Icons.handshake),
-    _NavItem('Projects', Icons.folder_outlined, Icons.folder),
-    _NavItem('Settings', Icons.settings_outlined, Icons.settings),
+    _NavItem('Home', Icons.home_outlined, Icons.home_rounded),
+    _NavItem('Records', Icons.receipt_long_outlined, Icons.receipt_long_rounded),
+    _NavItem('Loans', Icons.handshake_outlined, Icons.handshake_rounded),
+    _NavItem('Projects', Icons.folder_outlined, Icons.folder_rounded),
+    _NavItem('Settings', Icons.settings_outlined, Icons.settings_rounded),
   ];
 
   @override
@@ -338,17 +338,14 @@ class _FloatingNavBarState extends State<_FloatingNavBar>
   @override
   Widget build(BuildContext context) {
     final safePad = MediaQuery.of(context).padding.bottom;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
 
-    final barColor = isDark
-        ? Colors.black.withValues(alpha: 0.85)
-        : Colors.white.withValues(alpha: 0.88);
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.18)
-        : Colors.black.withValues(alpha: 0.07);
-    final shadowColor = isDark
-        ? Colors.black.withValues(alpha: 0.30)
-        : Colors.black.withValues(alpha: 0.07);
+    // The bar is LIGHTER than the page in dark mode, which is what makes the
+    // blur read as frosted glass sitting above the content. The old
+    // `Colors.black @85%` was darker than the page and read as a hole.
+    final barColor = p.barFill;
+    final borderColor = p.barBorder;
+    final shadowColor = p.shadow;
 
     final page = _effectivePage;
     double exp(int i) => (1.0 - (page - i).abs()).clamp(0.0, 1.0);
@@ -368,8 +365,8 @@ class _FloatingNavBarState extends State<_FloatingNavBar>
               boxShadow: [
                 BoxShadow(
                   color: shadowColor,
-                  blurRadius: isDark ? 24 : 20,
-                  spreadRadius: isDark ? 0 : 1,
+                  blurRadius: 24,
+                  spreadRadius: p.isDark ? 0 : 1,
                   offset: const Offset(0, 6),
                 ),
               ],
@@ -381,7 +378,6 @@ class _FloatingNavBarState extends State<_FloatingNavBar>
                   _NavPill(
                     item: widget.items[i],
                     expansion: exp(i),
-                    isDark: isDark,
                     onTap: () => widget.onTap(i),
                   ),
               ],
@@ -398,27 +394,25 @@ class _NavPill extends StatelessWidget {
   const _NavPill({
     required this.item,
     required this.expansion,
-    required this.isDark,
     required this.onTap,
   });
   final _NavItem item;
   final double expansion; // 0 = inactive, 1 = fully selected
-  final bool isDark;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    // Inactive icon: dark in light mode, muted white in dark mode
-    final inactiveIconColor = isDark
-        ? Colors.white.withValues(alpha: 0.45)
-        : Colors.black.withValues(alpha: 0.70);
+    final p = context.palette;
+    final inactiveIconColor = p.labelSecondary;
 
-    // Active icon + label: always green. Pill bg: black in light, greenSoft in dark.
-    final iconColor = Color.lerp(inactiveIconColor, AppColors.green, expansion)!;
-    const labelColor = AppColors.green;
+    // Active icon + label are always the accent. The pill fills with a soft
+    // accent wash in dark, and inverts to ink in light.
+    final iconColor = Color.lerp(inactiveIconColor, p.accent, expansion)!;
+    final labelColor = p.accent;
     final pillColor = Color.lerp(
       Colors.transparent,
-      isDark ? AppColors.greenSoft : Colors.black,
+      // Blended against the bar it actually sits on, not against a card.
+      p.isDark ? p.accentSoftOn(p.bgRaised) : p.label,
       expansion,
     )!;
     final labelOpacity =

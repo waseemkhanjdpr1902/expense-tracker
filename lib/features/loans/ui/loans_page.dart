@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../core/hero.dart';
 import '../../../core/currency.dart';
 import '../../../core/date_range.dart';
 import '../../../core/formatters.dart';
@@ -193,8 +194,8 @@ class _LoansPageState extends ConsumerState<LoansPage>
                     child: Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.green,
+                      decoration: BoxDecoration(
+                        color: context.palette.accent,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -204,7 +205,7 @@ class _LoansPageState extends ConsumerState<LoansPage>
             onPressed: _openFilterSheet,
           ),
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add_rounded),
             onPressed: () => openAddRecordSheet(context),
           ),
         ],
@@ -212,7 +213,7 @@ class _LoansPageState extends ConsumerState<LoansPage>
           preferredSize: const Size.fromHeight(48),
           child: TabBar(
             controller: _tab,
-            indicatorColor: AppColors.green,
+            indicatorColor: context.palette.accent,
             indicatorWeight: 3,
             indicatorSize: TabBarIndicatorSize.label,
             labelColor: context.ink,
@@ -227,7 +228,9 @@ class _LoansPageState extends ConsumerState<LoansPage>
           ),
         ),
       ),
-      body: TabBarView(
+      body: HeroScope(
+        name: 'loans',
+        child: TabBarView(
         controller: _tab,
         children: [
           _LoansList(
@@ -235,6 +238,7 @@ class _LoansPageState extends ConsumerState<LoansPage>
           _LoansList(
               loans: returned, isOutstanding: false, query: returnedQuery),
         ],
+        ),
       ),
     );
   }
@@ -253,7 +257,7 @@ class _LoansList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currency = ref.watch(currencyProvider);
     return RefreshIndicator(
-      color: AppColors.green,
+      color: context.palette.accent,
       onRefresh: () async {
         ref.invalidate(loansProvider);
         await ref.read(loansProvider(query).future);
@@ -296,13 +300,13 @@ class _LoansList extends ConsumerWidget {
                 return SummaryBoard(
                   left: BoardStat(
                     icon: Icons.arrow_upward_rounded,
-                    color: AppColors.green,
+                    color: context.palette.accent,
                     label: 'Lent out',
                     value: formatMoney(lent, currency),
                   ),
                   middle: BoardStat(
                     icon: Icons.arrow_downward_rounded,
-                    color: AppColors.danger,
+                    color: context.palette.dangerContent,
                     label: 'Borrowed',
                     value: formatMoney(borrowed, currency),
                   ),
@@ -310,7 +314,7 @@ class _LoansList extends ConsumerWidget {
                   rightValue:
                       '${net >= 0 ? '+' : '−'} ${formatMoney(net.abs(), currency)}',
                   rightColor:
-                      net >= 0 ? AppColors.green : AppColors.danger,
+                      net >= 0 ? context.palette.accent : context.palette.dangerContent,
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
                 );
               }
@@ -364,13 +368,13 @@ class _LoanCard extends ConsumerWidget {
                   width: 40,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppColors.greenSoft,
+                    color: context.palette.accentSoft,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     isBorrowed
-                        ? Icons.arrow_circle_down_outlined
-                        : Icons.handshake_outlined,
+                        ? Icons.arrow_circle_down_rounded
+                        : Icons.handshake_rounded,
                     size: 20,
                     color: context.ink,
                   ),
@@ -419,7 +423,7 @@ class _LoanCard extends ConsumerWidget {
                   if (loan.returned) ...[
                     _Badge(
                       text: isBorrowed ? 'Repaid' : 'Returned',
-                      bg: AppColors.greenSoft,
+                      bg: context.palette.accentSoft,
                       fg: context.ink,
                     ),
                     const SizedBox(width: 8),
@@ -434,9 +438,9 @@ class _LoanCard extends ConsumerWidget {
                       _Badge(
                         text: 'Due ${formatShortDate(loan.expectedReturnAt!)}',
                         bg: overdue
-                            ? AppColors.danger.withValues(alpha: 0.1)
+                            ? context.palette.dangerContent.withValues(alpha: 0.1)
                             : Colors.transparent,
-                        fg: overdue ? AppColors.danger : context.inkMuted,
+                        fg: overdue ? context.palette.dangerContent : context.inkMuted,
                         border: !overdue,
                         borderColor: context.hairline,
                       ),
@@ -446,8 +450,8 @@ class _LoanCard extends ConsumerWidget {
                           .read(databaseProvider)
                           .markLoanReturned(loan.id, returned: true),
                       style: TextButton.styleFrom(
-                        backgroundColor: AppColors.green,
-                        foregroundColor: AppColors.ink,
+                        backgroundColor: context.palette.accent,
+                        foregroundColor: context.palette.onAccent,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         shape: RoundedRectangleBorder(
@@ -456,7 +460,7 @@ class _LoanCard extends ConsumerWidget {
                       child: Text(
                         isBorrowed ? 'Mark repaid' : 'Mark returned',
                         style: AppTextStyles.caption.copyWith(
-                            color: AppColors.ink,
+                            color: context.palette.onAccentSoft,
                             fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -655,8 +659,8 @@ class _LoansFilterSheetState extends ConsumerState<_LoansFilterSheet> {
               child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.green,
-              foregroundColor: AppColors.ink,
+              backgroundColor: context.palette.accent,
+              foregroundColor: context.palette.onAccent,
             ),
             onPressed: () => Navigator.pop(ctx, inputText.trim()),
             child: const Text('Add'),
@@ -990,7 +994,7 @@ class _AddChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add, size: 14, color: context.inkSubtle),
+            Icon(Icons.add_rounded, size: 14, color: context.inkSubtle),
             const SizedBox(width: 4),
             Text(
               'Add',
@@ -1033,7 +1037,7 @@ class _DateTile extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.calendar_today_outlined,
+                Icon(Icons.calendar_today_rounded,
                     size: 14, color: context.inkSubtle),
                 const SizedBox(width: 6),
                 Text(

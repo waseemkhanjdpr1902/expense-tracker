@@ -32,7 +32,7 @@ Future<void> openAddRecordSheet(BuildContext context) async {
             ),
             const SizedBox(height: 10),
             _TypeCard(
-              icon: Icons.handshake_outlined,
+              icon: Icons.handshake_rounded,
               title: 'Loan given',
               subtitle: 'Money you lent to someone',
               onTap: () => Navigator.pop(ctx, RecordType.loanGiven),
@@ -40,7 +40,7 @@ Future<void> openAddRecordSheet(BuildContext context) async {
             ),
             const SizedBox(height: 10),
             _TypeCard(
-              icon: Icons.arrow_circle_down_outlined,
+              icon: Icons.arrow_circle_down_rounded,
               title: 'Loan taken',
               subtitle: 'Money you borrowed from someone',
               onTap: () => Navigator.pop(ctx, RecordType.loanTaken),
@@ -89,7 +89,7 @@ class _TypeCard extends StatelessWidget {
               width: 44,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: accent ? AppColors.greenSoft : Colors.transparent,
+                color: accent ? context.palette.accentSoft : Colors.transparent,
                 border: Border.all(color: context.hairline),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -109,7 +109,7 @@ class _TypeCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: context.inkSubtle),
+            Icon(Icons.chevron_right_rounded, color: context.inkSubtle),
           ],
         ),
       ),

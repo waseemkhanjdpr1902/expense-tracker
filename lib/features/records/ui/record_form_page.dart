@@ -5,16 +5,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
 import '../../../core/motion.dart';
+import '../../../core/hero.dart';
+import '../../../core/category_icons.dart';
+import '../../../core/icons.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/icon_badge.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../data/settings_repo.dart';
 
 class RecordFormPage extends ConsumerStatefulWidget {
-  const RecordFormPage({super.key, required this.type, this.existing});
+  const RecordFormPage({
+    super.key,
+    required this.type,
+    this.existing,
+    this.heroTag,
+  });
 
   final RecordType type;
   final RecordRow? existing;
+
+  /// Supplied by the list that pushed this page, so the row's badge can fly
+  /// here. Null for pushes with no origin (deep links, the empty-state CTA),
+  /// in which case there is simply no flight.
+  final Object? heroTag;
 
   @override
   ConsumerState<RecordFormPage> createState() => _RecordFormPageState();
@@ -81,7 +95,7 @@ class _RecordFormPageState extends ConsumerState<RecordFormPage> {
         actions: [
           if (_isEdit)
             IconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(Icons.delete_outline_rounded),
               onPressed: _confirmDelete,
             ),
         ],
@@ -91,6 +105,18 @@ class _RecordFormPageState extends ConsumerState<RecordFormPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
+            if (widget.heroTag != null) ...[
+              Center(
+                child: MaybeHero(
+                  tag: widget.heroTag,
+                  // Must resolve to the SAME glyph as the source row, or the
+                  // badge visibly swaps icon mid-flight.
+                  child: IconBadge(_badgeIcon(ref),
+                      tinted: _type != RecordType.expense),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+            ],
             Text('Amount (${currency.code})', style: captionMuted),
             const SizedBox(height: 8),
             TextFormField(
@@ -211,8 +237,8 @@ class _RecordFormPageState extends ConsumerState<RecordFormPage> {
             const SizedBox(height: 32),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.green,
-                foregroundColor: AppColors.ink,
+                backgroundColor: context.palette.accent,
+                foregroundColor: context.palette.onAccent,
               ),
               onPressed: _save,
               child: Text(_isEdit ? 'Save changes' : 'Save'),
@@ -221,6 +247,19 @@ class _RecordFormPageState extends ConsumerState<RecordFormPage> {
         ),
       ),
     );
+  }
+
+  /// Mirrors `RecordTile`'s choice: loans keep their directional glyph,
+  /// categorised money rows use the category's icon.
+  IconData _badgeIcon(WidgetRef ref) {
+    if (_type == RecordType.loanGiven) return AppIcons.loanGiven;
+    if (_type == RecordType.loanTaken) return AppIcons.loanTaken;
+    final cats = ref.watch(categoriesProvider).valueOrNull ?? const [];
+    final name = _selectedCategoryId == null
+        ? null
+        : cats.where((c) => c.id == _selectedCategoryId).map((c) => c.name).firstOrNull;
+    if (name != null) return iconForCategory(name);
+    return _type == RecordType.expense ? AppIcons.expense : AppIcons.income;
   }
 
   Future<void> _save() async {
@@ -283,8 +322,8 @@ class _RecordFormPageState extends ConsumerState<RecordFormPage> {
               child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.green,
-              foregroundColor: AppColors.ink,
+              backgroundColor: context.palette.accent,
+              foregroundColor: context.palette.onAccent,
             ),
             onPressed: () => Navigator.pop(ctx, inputText.trim()),
             child: const Text('Add'),
@@ -315,8 +354,8 @@ class _RecordFormPageState extends ConsumerState<RecordFormPage> {
               child: const Text('Cancel')),
           FilledButton(
               style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.danger,
-                  foregroundColor: Colors.white),
+                  backgroundColor: context.palette.danger,
+                  foregroundColor: context.palette.onDanger),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Delete')),
         ],
@@ -415,7 +454,7 @@ class _AddCategoryChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add, size: 14, color: context.inkMuted),
+            Icon(Icons.add_rounded, size: 14, color: context.inkMuted),
             const SizedBox(width: 4),
             Text('Add',
                 style: AppTextStyles.caption
@@ -461,7 +500,7 @@ class _DateField extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_outlined,
+            Icon(Icons.calendar_today_rounded,
                 size: 18, color: context.ink),
             const SizedBox(width: 12),
             Expanded(
@@ -477,7 +516,7 @@ class _DateField extends StatelessWidget {
             ),
             if (value != null && onClear != null)
               IconButton(
-                icon: const Icon(Icons.close, size: 18),
+                icon: const Icon(Icons.close_rounded, size: 18),
                 onPressed: onClear,
               ),
           ],

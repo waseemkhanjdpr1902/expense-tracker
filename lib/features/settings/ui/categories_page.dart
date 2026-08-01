@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/motion.dart';
+import '../../../core/category_icons.dart';
+import '../../../core/icons.dart';
+import '../../../core/widgets/icon_badge.dart';
 import '../../../core/theme.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
@@ -33,8 +36,8 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
               child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(
-                backgroundColor: AppColors.green,
-                foregroundColor: AppColors.ink),
+                backgroundColor: context.palette.accent,
+                foregroundColor: context.palette.onAccent),
             onPressed: () => Navigator.pop(ctx, inputText.trim()),
             child: const Text('Add'),
           ),
@@ -77,8 +80,8 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
               child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(
-                backgroundColor: AppColors.green,
-                foregroundColor: AppColors.ink),
+                backgroundColor: context.palette.accent,
+                foregroundColor: context.palette.onAccent),
             onPressed: () => Navigator.pop(ctx, inputText.trim()),
             child: const Text('Save'),
           ),
@@ -102,8 +105,8 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
               child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-                foregroundColor: Colors.white),
+                backgroundColor: context.palette.danger,
+                foregroundColor: context.palette.onDanger),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),
           ),
@@ -123,7 +126,7 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
         title: const Text('Categories'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add_rounded),
             onPressed: _addCategory,
           ),
         ],
@@ -137,8 +140,8 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.label_outline,
-                          size: 56, color: context.inkSubtle),
+                      Icon(AppIcons.category,
+                          size: AppIconSize.empty, color: context.inkSubtle),
                       const SizedBox(height: 16),
                       Text('No categories yet',
                           style:
@@ -169,16 +172,8 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 4),
-                          leading: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: AppColors.greenSoft,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.label_outline,
-                                size: 18, color: AppColors.green),
-                          ),
+                          leading: IconBadge(iconForCategory(cat.name),
+                              size: 40, tinted: true),
                           title: Text(cat.name,
                               style:
                                   AppTextStyles.body.copyWith(color: context.ink,
@@ -187,14 +182,14 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: Icon(Icons.edit_outlined,
+                                icon: Icon(Icons.edit_rounded,
                                     size: 20, color: context.inkMuted),
                                 onPressed: () => _renameCategory(cat),
                                 visualDensity: VisualDensity.compact,
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline,
-                                    size: 20, color: AppColors.danger),
+                                icon: Icon(Icons.delete_outline_rounded,
+                                    size: 20, color: context.palette.dangerContent),
                                 onPressed: () => _deleteCategory(cat),
                                 visualDensity: VisualDensity.compact,
                               ),

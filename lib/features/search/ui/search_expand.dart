@@ -145,7 +145,8 @@ class SearchExpandRoute<T> extends PageRouteBuilder<T> {
                 behavior: HitTestBehavior.opaque,
                 onTap: () => Navigator.of(context).maybePop(),
                 child: ColoredBox(
-                  color: Colors.black.withValues(alpha: 0.38 * v),
+                  color: context.palette.scrim
+                      .withValues(alpha: context.palette.scrim.a * v),
                 ),
               ),
             ),

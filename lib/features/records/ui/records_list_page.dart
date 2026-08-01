@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/hero.dart';
 import '../../../core/currency.dart';
 import '../../../core/date_range.dart';
 import '../../../core/formatters.dart';
@@ -246,8 +247,8 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                     child: Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.green,
+                      decoration: BoxDecoration(
+                        color: context.palette.accent,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -256,15 +257,17 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add_rounded),
             onPressed: () => openAddRecordSheet(context),
           ),
         ],
       ),
-      body: SafeArea(
+      body: HeroScope(
+        name: 'records',
+        child: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          color: AppColors.green,
+          color: context.palette.accent,
           onRefresh: () async {
             ref.invalidate(filteredRecordsProvider);
             ref.invalidate(filteredTotalsProvider);
@@ -299,7 +302,7 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.receipt_long_outlined,
+                        Icon(Icons.receipt_long_rounded,
                             size: 48, color: context.inkSubtle),
                         const SizedBox(height: 12),
                         Text('No records found',
@@ -336,7 +339,7 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                     return effectiveTotals.maybeWhen(
                       data: (t) => t.incomeMinor == 0 && t.expenseMinor == 0
                           ? const SizedBox.shrink()
-                          : _recordsBoard(t, currency),
+                          : _recordsBoard(context, t, currency),
                       orElse: () => const SizedBox.shrink(),
                     );
                   }
@@ -347,12 +350,12 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                       padding: const EdgeInsets.symmetric(vertical: 20),
                       child: Center(
                         child: mayHaveMore
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: AppColors.green,
+                                  color: context.palette.accent,
                                 ),
                               )
                             : Text(
@@ -391,7 +394,7 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                                 '${dayNet > 0 ? '+' : '−'} ${formatMoney(dayNet.abs(), currency)}',
                                 style: AppTextStyles.caption.copyWith(
                                   color: dayNet > 0
-                                      ? AppColors.green
+                                      ? context.palette.accent
                                       : context.inkMuted,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -407,12 +410,12 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                             direction: DismissDirection.endToStart,
                             background: Container(
                               color:
-                                  AppColors.danger.withValues(alpha: 0.1),
+                                  context.palette.dangerContent.withValues(alpha: 0.1),
                               alignment: Alignment.centerRight,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 24),
-                              child: const Icon(Icons.delete_outline,
-                                  color: AppColors.danger),
+                              child: Icon(Icons.delete_outline_rounded,
+                                  color: context.palette.dangerContent),
                             ),
                             confirmDismiss: (_) async =>
                                 await showDialog<bool>(
@@ -428,10 +431,9 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                                           child: const Text('Cancel')),
                                       FilledButton(
                                           style: FilledButton.styleFrom(
-                                              backgroundColor:
-                                                  AppColors.danger,
+                                              backgroundColor: context.palette.danger,
                                               foregroundColor:
-                                                  Colors.white),
+                                                  context.palette.onDanger),
                                           onPressed: () =>
                                               Navigator.pop(ctx, true),
                                           child: const Text('Delete')),
@@ -458,6 +460,7 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
           ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -557,8 +560,8 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
               child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.green,
-              foregroundColor: AppColors.ink,
+              backgroundColor: context.palette.accent,
+              foregroundColor: context.palette.onAccent,
             ),
             onPressed: () => Navigator.pop(ctx, inputText.trim()),
             child: const Text('Add'),
@@ -908,7 +911,7 @@ class _AddChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add, size: 14, color: context.inkSubtle),
+            Icon(Icons.add_rounded, size: 14, color: context.inkSubtle),
             const SizedBox(width: 4),
             Text(
               'Add',
@@ -954,7 +957,7 @@ class _DateTile extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.calendar_today_outlined,
+                Icon(Icons.calendar_today_rounded,
                     size: 14, color: context.inkSubtle),
                 const SizedBox(width: 6),
                 Text(
@@ -975,24 +978,25 @@ class _DateTile extends StatelessWidget {
 
 // ── Totals strip ──────────────────────────────────────────────────────────────
 
-Widget _recordsBoard(RecordsTotals totals, CurrencyOption currency) {
+Widget _recordsBoard(
+    BuildContext context, RecordsTotals totals, CurrencyOption currency) {
   final net = totals.netMinor;
   return SummaryBoard(
     left: BoardStat(
       icon: Icons.arrow_downward_rounded,
-      color: AppColors.green,
+      color: context.palette.accent,
       label: 'Income',
       value: formatMoney(totals.incomeMinor, currency),
     ),
     middle: BoardStat(
       icon: Icons.arrow_upward_rounded,
-      color: AppColors.danger,
+      color: context.palette.dangerContent,
       label: 'Expense',
       value: formatMoney(totals.expenseMinor, currency),
     ),
     rightLabel: 'Net',
     rightValue:
         '${net >= 0 ? '+' : '−'} ${formatMoney(net.abs(), currency)}',
-    rightColor: net >= 0 ? AppColors.green : AppColors.danger,
+    rightColor: net >= 0 ? context.palette.accent : context.palette.dangerContent,
   );
 }

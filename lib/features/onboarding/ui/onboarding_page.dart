@@ -102,7 +102,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                           width: i == _page ? 22 : 6,
                           decoration: BoxDecoration(
                             color: i == _page
-                                ? AppColors.green
+                                ? context.palette.accent
                                 : context.hairline,
                             borderRadius: BorderRadius.circular(100),
                           ),
@@ -114,8 +114,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     width: double.infinity,
                     child: FilledButton(
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.green,
-                        foregroundColor: AppColors.ink,
+                        backgroundColor: context.palette.accent,
+                        foregroundColor: context.palette.onAccent,
                       ),
                       onPressed: () {
                         if (_isLast) {

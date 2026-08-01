@@ -235,8 +235,8 @@ class _MascotCompanionState extends ConsumerState<MascotCompanion> {
                       Container(
                         width: 5,
                         height: 5,
-                        decoration: const BoxDecoration(
-                          color: AppColors.green,
+                        decoration: BoxDecoration(
+                          color: context.palette.accent,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -253,7 +253,7 @@ class _MascotCompanionState extends ConsumerState<MascotCompanion> {
                 ],
               ),
             ),
-            Icon(Icons.pets, size: 16, color: context.inkSubtle),
+            Icon(Icons.pets_rounded, size: 16, color: context.inkSubtle),
           ],
         ),
       ),

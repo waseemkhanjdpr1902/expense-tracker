@@ -51,7 +51,7 @@ class ProfileChip extends ConsumerWidget {
                     height: 10,
                     width: 10,
                     decoration: BoxDecoration(
-                      color: AppColors.green,
+                      color: context.palette.accent,
                       shape: BoxShape.circle,
                       border: Border.all(color: context.surface, width: 1.5),
                     ),
@@ -74,7 +74,7 @@ class _AvatarInner extends StatelessWidget {
     final photo = account?.photoUrl as String?;
     if (account == null) {
       return Center(
-        child: Icon(Icons.person_outline, size: 18, color: context.ink),
+        child: Icon(Icons.person_outline_rounded, size: 18, color: context.ink),
       );
     }
     if (photo == null || photo.isEmpty) {
@@ -82,22 +82,22 @@ class _AvatarInner extends StatelessWidget {
           account?.email as String? ??
           '?');
       return Container(
-        color: AppColors.greenSoft,
+        color: context.palette.accentSoft,
         alignment: Alignment.center,
         child: Text(initials,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: Colors.black)),
+                color: context.palette.onAccentSoft)),
       );
     }
     return Image.network(
       photo,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => Container(
-        color: AppColors.greenSoft,
+        color: context.palette.accentSoft,
         alignment: Alignment.center,
-        child: Icon(Icons.person, size: 18, color: context.ink),
+        child: Icon(Icons.person_rounded, size: 18, color: context.ink),
       ),
     );
   }

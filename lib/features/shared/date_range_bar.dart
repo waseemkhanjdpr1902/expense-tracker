@@ -135,7 +135,7 @@ class _YearChip extends StatelessWidget {
             child: Row(
               children: [
                 if (y == year && selected)
-                  const Icon(Icons.check, size: 16, color: AppColors.green)
+                  Icon(Icons.check_rounded, size: 16, color: context.palette.accent)
                 else
                   const SizedBox(width: 16),
                 const SizedBox(width: 8),
@@ -164,7 +164,7 @@ class _YearChip extends StatelessWidget {
                   fontWeight: FontWeight.w600),
               child: Text('$year'),
             ),
-            Icon(Icons.arrow_drop_down,
+            Icon(Icons.arrow_drop_down_rounded,
                 size: 20,
                 color: selected ? context.surface : context.ink),
           ],

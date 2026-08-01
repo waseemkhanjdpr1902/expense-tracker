@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/currency.dart';
 import '../../../core/formatters.dart';
+import '../../../core/category_icons.dart';
+import '../../../core/hero.dart';
+import '../../../core/icons.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/icon_badge.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../search/ui/widgets/highlight.dart';
@@ -32,13 +36,21 @@ class RecordTile extends ConsumerWidget {
     final isLoanTaken = record.type == RecordType.loanTaken;
     final isLoan = isLoanGiven || isLoanTaken;
 
-    final IconData icon = isExpense
-        ? Icons.arrow_upward_rounded
-        : isIncome
-            ? Icons.arrow_downward_rounded
-            : isLoanTaken
-                ? Icons.arrow_circle_down_outlined
-                : Icons.handshake_outlined;
+    // Loans keep their directional icon — the counterparty is the subject.
+    // Categorised money rows get the category's own icon, which is what makes
+    // a long list scannable at a glance.
+    final heroTag = HeroTags.record(HeroScope.maybeOf(context), record.id);
+    final catId = record.categoryId;
+    final String? catNameForIcon = (isLoan || catId == null)
+        ? null
+        : cats.where((c) => c.id == catId).map((c) => c.name).firstOrNull;
+    final IconData icon = isLoanTaken
+        ? AppIcons.loanTaken
+        : isLoanGiven
+            ? AppIcons.loanGiven
+            : catNameForIcon != null
+                ? iconForCategory(catNameForIcon)
+                : (isExpense ? AppIcons.expense : AppIcons.income);
 
     final String title = isLoan
         ? (record.counterparty?.isNotEmpty == true
@@ -76,24 +88,17 @@ class RecordTile extends ConsumerWidget {
     return InkWell(
       onTap: () => Navigator.of(context).push(MaterialPageRoute(
         builder: (_) =>
-            RecordFormPage(type: record.type, existing: record),
+            RecordFormPage(
+                type: record.type, existing: record, heroTag: heroTag),
       )),
       borderRadius: BorderRadius.circular(AppRadii.inner),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         child: Row(
           children: [
-            Container(
-              height: 44,
-              width: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                border: Border.all(color: context.hairline),
-                borderRadius: BorderRadius.circular(AppRadii.chip),
-                color: isIncome || isLoan ? AppColors.greenSoft : null,
-              ),
-              child: Icon(icon,
-                  color: isIncome ? AppColors.green : context.ink, size: 20),
+            MaybeHero(
+              tag: heroTag,
+              child: IconBadge(icon, tinted: isIncome || isLoan),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -129,7 +134,7 @@ class RecordTile extends ConsumerWidget {
             const SizedBox(width: 10),
             Text(amount,
                 style: AppTextStyles.body.copyWith(
-                    color: isIncome ? AppColors.green : context.ink,
+                    color: isIncome ? context.palette.accent : context.ink,
                     fontWeight: FontWeight.w700)),
           ],
         ),

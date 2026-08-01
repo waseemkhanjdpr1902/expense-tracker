@@ -45,5 +45,5 @@ TextSpan highlightSpan(
 TextStyle highlightStyle(BuildContext context, TextStyle base) => base.copyWith(
       color: context.ink,
       fontWeight: FontWeight.w800,
-      backgroundColor: AppColors.greenSoft,
+      backgroundColor: context.palette.accentSoft,
     );

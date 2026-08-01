@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/currency.dart';
 import '../../../core/debounce.dart';
+import '../../../core/hero.dart';
 import '../../../core/motion.dart';
 import '../../../core/search_text.dart';
 import '../../../core/theme.dart';
@@ -374,7 +375,7 @@ class _Results extends ConsumerWidget {
           children: [
             for (final p in projects.take(show))
               SearchResultRow(
-                icon: Icons.folder_outlined,
+                icon: Icons.folder_rounded,
                 title: p.name,
                 subtitle: p.description,
                 trailing: formatMoney(p.totalAmountMinor, currency),
@@ -396,7 +397,7 @@ class _Results extends ConsumerWidget {
           children: [
             for (final c in categories.take(show))
               SearchResultRow(
-                icon: Icons.label_outline_rounded,
+                icon: Icons.sell_rounded,
                 title: c.name,
                 subtitle: 'Category',
                 highlight: query,
@@ -407,7 +408,9 @@ class _Results extends ConsumerWidget {
         ),
     ];
 
-    return ListView.builder(
+    return HeroScope(
+      name: 'search',
+      child: ListView.builder(
       // The Scaffold deliberately does not resize for the keyboard (that would
       // move the reveal's target rect mid-transition), so the inset has to be
       // added here or the last results sit underneath it.
@@ -423,6 +426,7 @@ class _Results extends ConsumerWidget {
         delay: Duration(milliseconds: 30 * i),
         offset: 4,
         child: sections[i],
+      ),
       ),
     );
   }
@@ -461,7 +465,7 @@ class _Section extends StatelessWidget {
                             style: AppTextStyles.caption.copyWith(
                                 color: context.ink,
                                 fontWeight: FontWeight.w700)),
-                        Icon(Icons.chevron_right,
+                        Icon(Icons.chevron_right_rounded,
                             size: 16, color: context.inkSubtle),
                       ],
                     ),

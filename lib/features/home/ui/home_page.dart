@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/chart_data.dart';
 import '../../../core/currency.dart';
 import '../../../core/formatters.dart';
+import '../../../core/hero.dart';
 import '../../../core/motion.dart';
 import '../../../core/theme.dart';
 import '../../../data/database.dart';
@@ -37,7 +38,7 @@ class HomePage extends ConsumerWidget {
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          color: AppColors.green,
+          color: context.palette.accent,
           onRefresh: () async {
             ref.invalidate(dashboardStatsProvider);
             ref.invalidate(recentRecordsProvider);
@@ -144,7 +145,7 @@ class HomePage extends ConsumerWidget {
                       Text('See all',
                           style: AppTextStyles.caption
                               .copyWith(color: context.inkMuted)),
-                      Icon(Icons.chevron_right,
+                      Icon(Icons.chevron_right_rounded,
                           size: 16, color: context.inkSubtle),
                     ],
                   ),
@@ -166,15 +167,18 @@ class HomePage extends ConsumerWidget {
                   if (items.isEmpty) {
                     return const _EmptyRecent(key: ValueKey('recent-empty'));
                   }
-                  return Column(
-                    key: const ValueKey('recent-list'),
-                    children: [
-                      for (final r in items)
-                        FadeIn(
-                          key: ValueKey(r.id),
-                          child: RecordTile(record: r, currency: currency),
-                        ),
-                    ],
+                  return HeroScope(
+                    name: 'home',
+                    child: Column(
+                      key: const ValueKey('recent-list'),
+                      children: [
+                        for (final r in items)
+                          FadeIn(
+                            key: ValueKey(r.id),
+                            child: RecordTile(record: r, currency: currency),
+                          ),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -202,15 +206,17 @@ class _BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Light mode: black hero card. Dark mode: dark-gray card (not white).
-    // Text is always white since both card backgrounds are dark.
-    final cardBg = isDark ? const Color(0xFF1A1A1B) : Colors.black;
-    const foreground = Colors.white;
+    final p = context.palette;
+    // The hero is a dark surface in BOTH themes — inverted black in light,
+    // and a raised step of the ramp in dark. Every foreground derives from
+    // `onHero`, so nothing here assumes a particular background.
+    final cardBg = p.heroSurface;
+    final foreground = p.onHero;
     final muted = foreground.withValues(alpha: 0.60);
     final subtle = foreground.withValues(alpha: 0.40);
     final hairline = foreground.withValues(alpha: 0.12);
-    const valueColor = Colors.white;
+    // Neutral: only the balance figure itself carries the accent.
+    final valueColor = foreground;
 
     return Container(
       decoration: BoxDecoration(
@@ -234,8 +240,10 @@ class _BalanceCard extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.white.withValues(alpha: 0.05),
-                      Colors.white.withValues(alpha: 0.0),
+                      // Softer in dark: the ramp surface is already lifted,
+                      // so a full-strength sheen reads as a smear.
+                      foreground.withValues(alpha: p.isDark ? 0.03 : 0.05),
+                      foreground.withValues(alpha: 0.0),
                     ],
                   ),
                 ),
@@ -244,7 +252,8 @@ class _BalanceCard extends StatelessWidget {
             Positioned.fill(
               child: RepaintBoundary(
                 child: CustomPaint(
-                    painter: _BalanceDecorPainter(isDark: false)),
+                    painter: _BalanceDecorPainter(
+                        accent: context.palette.accent)),
               ),
             ),
             Padding(
@@ -257,8 +266,8 @@ class _BalanceCard extends StatelessWidget {
                       Container(
                         height: 5,
                         width: 5,
-                        decoration: const BoxDecoration(
-                          color: AppColors.green,
+                        decoration: BoxDecoration(
+                          color: context.palette.accent,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -274,8 +283,8 @@ class _BalanceCard extends StatelessWidget {
                               horizontal: 6, vertical: 4),
                           child: Icon(
                             hidden
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
                             color: muted,
                             size: 18,
                           ),
@@ -286,12 +295,12 @@ class _BalanceCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.greenSoft,
+                          color: p.accentSoftOn(p.heroSurface),
                           borderRadius: BorderRadius.circular(100),
                         ),
                         child: Text(currency.code,
                             style: AppTextStyles.caption.copyWith(
-                                color: Colors.white,
+                                color: foreground,
                                 fontWeight: FontWeight.w700)),
                       ),
                     ],
@@ -303,14 +312,14 @@ class _BalanceCard extends StatelessWidget {
                             '••••••',
                             key: const ValueKey('bal-hidden'),
                             style: AppTextStyles.display.copyWith(
-                                color: AppColors.green, fontSize: 44),
+                                color: context.palette.accent, fontSize: 44),
                           )
                         : AnimatedMoney(
                             key: const ValueKey('bal-shown'),
                             minor: stats.availableBalance,
                             currency: currency,
                             style: AppTextStyles.display
-                                .copyWith(color: AppColors.green, fontSize: 44),
+                                .copyWith(color: context.palette.accent, fontSize: 44),
                           ),
                   ),
                   const SizedBox(height: 20),
@@ -390,7 +399,7 @@ class _MiniStat extends StatelessWidget {
         Row(children: [
           Icon(icon,
               size: 14,
-              color: accentDot ? AppColors.green : subtleColor),
+              color: accentDot ? context.palette.accent : subtleColor),
           const SizedBox(width: 4),
           Text(label,
               style: AppTextStyles.caption.copyWith(color: mutedColor)),
@@ -416,21 +425,24 @@ class _MiniStat extends StatelessWidget {
 }
 
 class _BalanceDecorPainter extends CustomPainter {
-  _BalanceDecorPainter({required this.isDark});
-  final bool isDark;
+  /// Both injected rather than read from context — a painter has no
+  /// BuildContext, and this keeps it theme-agnostic (same approach as
+  /// PixelCat). [intensity] scales every alpha, so the decoration reads
+  /// equally on the light-mode black card and the dark-mode raised card.
+  const _BalanceDecorPainter({required this.accent, this.intensity = 1.0});
+
+  final Color accent;
+  final double intensity;
 
   @override
   void paint(Canvas canvas, Size size) {
-    // On dark mode (white card), green accents need slightly higher alpha
-    // to stay visible against white; on light mode (black card), green pops
-    // naturally so we use lower alpha for subtlety.
-    final base = isDark ? 0.55 : 0.35;
-    final bright = isDark ? 0.85 : 0.7;
-    final scanAlpha = isDark ? 0.18 : 0.08;
-    final arcAlpha = isDark ? 0.28 : 0.15;
+    final base = 0.35 * intensity;
+    final bright = 0.70 * intensity;
+    final scanAlpha = 0.08 * intensity;
+    final arcAlpha = 0.15 * intensity;
 
     final stroke = Paint()
-      ..color = AppColors.green.withValues(alpha: base)
+      ..color = accent.withValues(alpha: base)
       ..strokeWidth = 1.5
       ..strokeCap = StrokeCap.round;
 
@@ -442,11 +454,11 @@ class _BalanceDecorPainter extends CustomPainter {
     canvas.drawLine(
       Offset(size.width - 22, 12),
       Offset(size.width - 12, 22),
-      stroke..color = AppColors.green.withValues(alpha: bright),
+      stroke..color = accent.withValues(alpha: bright),
     );
 
     final scan = Paint()
-      ..color = AppColors.green.withValues(alpha: scanAlpha)
+      ..color = accent.withValues(alpha: scanAlpha)
       ..strokeWidth = 1;
     const scanY1 = 78.0;
     const scanY2 = 108.0;
@@ -454,7 +466,7 @@ class _BalanceDecorPainter extends CustomPainter {
     canvas.drawLine(const Offset(0, scanY2), Offset(size.width, scanY2), scan);
 
     final arc = Paint()
-      ..color = AppColors.green.withValues(alpha: arcAlpha)
+      ..color = accent.withValues(alpha: arcAlpha)
       ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke;
     canvas.drawCircle(Offset(-30, size.height + 20), 70, arc);
@@ -462,22 +474,21 @@ class _BalanceDecorPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BalanceDecorPainter old) =>
-      old.isDark != isDark;
+      old.accent != accent || old.intensity != intensity;
 }
 
 class _BalanceCardSkeleton extends StatelessWidget {
   const _BalanceCardSkeleton({super.key});
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A1B) : Colors.black,
+        color: context.palette.heroSurface,
         borderRadius: BorderRadius.circular(24),
       ),
-      child: const Center(
-          child: CircularProgressIndicator(color: AppColors.green)),
+      child: Center(
+          child: CircularProgressIndicator(color: context.palette.accent)),
     );
   }
 }
@@ -494,7 +505,7 @@ class _OutstandingCard extends ConsumerWidget {
       onTap: () => ref.read(shellNavProvider.notifier).goTo(2),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.greenSoft,
+          color: context.palette.accentSoft,
           borderRadius: BorderRadius.circular(AppRadii.card),
         ),
         padding: const EdgeInsets.all(16),
@@ -508,7 +519,7 @@ class _OutstandingCard extends ConsumerWidget {
                 color: context.surface,
                 borderRadius: BorderRadius.circular(AppRadii.chip),
               ),
-              child: Icon(Icons.handshake_outlined,
+              child: Icon(Icons.handshake_rounded,
                   color: context.ink, size: 20),
             ),
           const SizedBox(width: 14),
@@ -535,7 +546,7 @@ class _OutstandingCard extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Container(
                         height: 1,
-                        color: AppColors.green.withValues(alpha: 0.18)),
+                        color: context.palette.accent.withValues(alpha: 0.18)),
                   ),
                 if (stats.outstandingBorrowedCount > 0) ...[
                   Text(
@@ -553,7 +564,7 @@ class _OutstandingCard extends ConsumerWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: context.inkSubtle),
+          Icon(Icons.chevron_right_rounded, color: context.inkSubtle),
         ],
       ),
       ),
@@ -592,8 +603,8 @@ class _EmptyRecent extends StatelessWidget {
             width: double.infinity,
             child: FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.green,
-                foregroundColor: AppColors.ink,
+                backgroundColor: context.palette.accent,
+                foregroundColor: context.palette.onAccent,
               ),
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) =>
@@ -765,7 +776,7 @@ class _ChartCardState extends ConsumerState<_ChartCard> {
                           label: 'Income',
                           minor: totalIncome,
                           currency: currency,
-                          color: AppColors.green,
+                          color: context.palette.accent,
                           icon: Icons.arrow_downward_rounded,
                         ),
                         Container(
@@ -779,7 +790,7 @@ class _ChartCardState extends ConsumerState<_ChartCard> {
                           label: 'Expense',
                           minor: totalExpense,
                           currency: currency,
-                          color: AppColors.danger,
+                          color: context.palette.dangerContent,
                           icon: Icons.arrow_upward_rounded,
                         ),
                         const Spacer(),
@@ -794,8 +805,8 @@ class _ChartCardState extends ConsumerState<_ChartCard> {
                               '${net >= 0 ? '+' : '−'} ${formatMoney(net.abs(), currency)}',
                               style: AppTextStyles.caption.copyWith(
                                 color: net >= 0
-                                    ? AppColors.green
-                                    : AppColors.danger,
+                                    ? context.palette.accent
+                                    : context.palette.dangerContent,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13,
                               ),
@@ -814,9 +825,9 @@ class _ChartCardState extends ConsumerState<_ChartCard> {
             height: 160,
             child: chartAsync.when(
               skipLoadingOnReload: true,
-              loading: () => const Center(
+              loading: () => Center(
                 child: CircularProgressIndicator(
-                    color: AppColors.green, strokeWidth: 2),
+                    color: context.palette.accent, strokeWidth: 2),
               ),
               error: (e, _) => const SizedBox.shrink(),
               data: (pts) {
@@ -845,14 +856,14 @@ class _ChartCardState extends ConsumerState<_ChartCard> {
           Row(
             children: [
               _Legend(
-                color: AppColors.green,
+                color: context.palette.accent,
                 label: 'Income',
                 enabled: _showIncome,
                 onTap: () => _toggleSeries(income: true),
               ),
               const SizedBox(width: 16),
               _Legend(
-                color: AppColors.danger,
+                color: context.palette.dangerContent,
                 label: 'Expense',
                 enabled: _showExpense,
                 onTap: () => _toggleSeries(income: false),
@@ -1049,7 +1060,7 @@ class _LineChart extends StatelessWidget {
         spots: incomeSpots,
         isCurved: true,
         preventCurveOverShooting: true,
-        color: AppColors.green,
+        color: context.palette.accent,
         barWidth: 2,
         dotData: const FlDotData(show: false),
         belowBarData: BarAreaData(
@@ -1058,8 +1069,8 @@ class _LineChart extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppColors.green.withValues(alpha: 0.15),
-              AppColors.green.withValues(alpha: 0.0),
+              context.palette.accent.withValues(alpha: 0.15),
+              context.palette.accent.withValues(alpha: 0.0),
             ],
           ),
         ),
@@ -1071,7 +1082,7 @@ class _LineChart extends StatelessWidget {
         spots: expenseSpots,
         isCurved: true,
         preventCurveOverShooting: true,
-        color: AppColors.danger,
+        color: context.palette.dangerContent,
         barWidth: 2,
         dotData: const FlDotData(show: false),
         belowBarData: BarAreaData(
@@ -1080,8 +1091,8 @@ class _LineChart extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppColors.danger.withValues(alpha: 0.06),
-              AppColors.danger.withValues(alpha: 0.0),
+              context.palette.dangerContent.withValues(alpha: 0.06),
+              context.palette.dangerContent.withValues(alpha: 0.0),
             ],
           ),
         ),
@@ -1135,7 +1146,7 @@ class _LineChart extends StatelessWidget {
               return LineTooltipItem(
                 '${isIncome ? '↑' : '↓'} ${formatMoney(amount, currency)}',
                 AppTextStyles.caption.copyWith(
-                  color: isIncome ? AppColors.green : AppColors.danger,
+                  color: isIncome ? context.palette.accent : context.palette.dangerContent,
                   fontWeight: FontWeight.w700,
                 ),
               );

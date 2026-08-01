@@ -37,14 +37,14 @@ class ProjectDetailPage extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Edit project',
-            icon: const Icon(Icons.edit_outlined),
+            icon: const Icon(Icons.edit_rounded),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => ProjectFormPage(existing: project),
             )),
           ),
           PopupMenuButton<String>(
             tooltip: 'More actions',
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_vert_rounded),
             onSelected: (v) {
               if (v == 'status') {
                 _toggleCompleted(context, ref, project);
@@ -60,7 +60,7 @@ class ProjectDetailPage extends ConsumerWidget {
                     Icon(
                       isCompleted
                           ? Icons.undo_rounded
-                          : Icons.check_circle_outline,
+                          : Icons.check_circle_outline_rounded,
                       size: 20,
                       color: context.ink,
                     ),
@@ -73,11 +73,11 @@ class ProjectDetailPage extends ConsumerWidget {
                 value: 'delete',
                 child: Row(
                   children: [
-                    const Icon(Icons.delete_outline,
-                        size: 20, color: AppColors.danger),
+                    Icon(Icons.delete_outline_rounded,
+                        size: 20, color: context.palette.dangerContent),
                     const SizedBox(width: 12),
                     Text('Delete',
-                        style: TextStyle(color: AppColors.danger)),
+                        style: TextStyle(color: context.palette.dangerContent)),
                   ],
                 ),
               ),
@@ -106,7 +106,7 @@ class ProjectDetailPage extends ConsumerWidget {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color:
-                      isCompleted ? AppColors.greenSoft : Colors.transparent,
+                      isCompleted ? context.palette.accentSoft : Colors.transparent,
                   border: Border.all(color: context.hairline),
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -125,7 +125,7 @@ class ProjectDetailPage extends ConsumerWidget {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: AppColors.greenSoft,
+                                    color: context.palette.accentSoft,
                                     borderRadius: BorderRadius.circular(100),
                                   ),
                                   child: Text(catName,
@@ -155,15 +155,15 @@ class ProjectDetailPage extends ConsumerWidget {
                                 horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
                               color: isCompleted
-                                  ? AppColors.green
-                                  : AppColors.greenSoft,
+                                  ? context.palette.accent
+                                  : context.palette.accentSoft,
                               borderRadius: BorderRadius.circular(100),
                             ),
                             child: Text(
                               isCompleted ? 'Completed' : 'Fully paid',
                               style: AppTextStyles.caption.copyWith(
                                   color: isCompleted
-                                      ? AppColors.ink
+                                      ? context.palette.onAccentSoft
                                       : context.ink,
                                   fontWeight: FontWeight.w700),
                             ),
@@ -185,8 +185,8 @@ class ProjectDetailPage extends ConsumerWidget {
                         value: progress,
                         minHeight: 8,
                         backgroundColor: context.hairline,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppColors.green),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            context.palette.accent),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -202,13 +202,13 @@ class ProjectDetailPage extends ConsumerWidget {
                         _StatChip(
                           label: 'Paid',
                           value: formatMoney(paidMinor, currency),
-                          color: AppColors.green,
+                          color: context.palette.accent,
                         ),
                         _StatChip(
                           label: isDone ? 'Extra' : 'Remaining',
                           value: formatMoney(remaining.abs(), currency),
                           color: isDone
-                              ? AppColors.green
+                              ? context.palette.accent
                               : context.inkMuted,
                         ),
                       ],
@@ -227,10 +227,10 @@ class ProjectDetailPage extends ConsumerWidget {
                   TextButton.icon(
                     onPressed: () =>
                         _showAddPaymentSheet(context, ref, project),
-                    icon: const Icon(Icons.add, size: 18),
+                    icon: const Icon(Icons.add_rounded, size: 18),
                     label: const Text('Add'),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.green,
+                      foregroundColor: context.palette.accent,
                     ),
                   ),
                 ],
@@ -308,8 +308,8 @@ class ProjectDetailPage extends ConsumerWidget {
               child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-                foregroundColor: Colors.white),
+                backgroundColor: context.palette.danger,
+                foregroundColor: context.palette.onDanger),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),
           ),
@@ -469,7 +469,7 @@ class _AddPaymentSheetState extends ConsumerState<_AddPaymentSheet> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_today_outlined,
+                        Icon(Icons.calendar_today_rounded,
                             size: 18, color: context.inkSubtle),
                         const SizedBox(width: 12),
                         Text(formatShortDate(_paidAt),
@@ -482,8 +482,8 @@ class _AddPaymentSheetState extends ConsumerState<_AddPaymentSheet> {
                 const SizedBox(height: 28),
                 FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.green,
-                    foregroundColor: AppColors.ink,
+                    backgroundColor: context.palette.accent,
+                    foregroundColor: context.palette.onAccent,
                   ),
                   onPressed: _save,
                   child: const Text('Save payment'),
@@ -531,15 +531,15 @@ class _TimelineStep extends StatelessWidget {
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: AppColors.green,
+                    color: context.palette.accent,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.green, width: 2),
+                    border: Border.all(color: context.palette.accent, width: 2),
                   ),
                   child: Center(
                     child: Text(
                       '$stepNumber',
-                      style: const TextStyle(
-                        color: Colors.black,
+                      style: TextStyle(
+                        color: context.palette.onAccent,
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
                       ),
@@ -551,7 +551,7 @@ class _TimelineStep extends StatelessWidget {
                   Expanded(
                     child: Container(
                       width: 2,
-                      color: AppColors.green.withValues(alpha: 0.3),
+                      color: context.palette.accent.withValues(alpha: 0.3),
                       margin: const EdgeInsets.symmetric(vertical: 4),
                     ),
                   ),
@@ -598,7 +598,7 @@ class _TimelineStep extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.delete_outline,
+                      icon: Icon(Icons.delete_outline_rounded,
                           size: 18, color: context.inkSubtle),
                       onPressed: onDelete,
                       visualDensity: VisualDensity.compact,
