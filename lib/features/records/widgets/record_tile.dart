@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/currency.dart';
 import '../../../core/formatters.dart';
 import '../../../core/category_icons.dart';
+import '../../../core/haptics.dart';
+import '../../../core/motion.dart';
+import '../../../core/routes.dart';
 import '../../../core/hero.dart';
 import '../../../core/icons.dart';
 import '../../../core/theme.dart';
@@ -85,13 +88,16 @@ class RecordTile extends ConsumerWidget {
     final String subline =
         catName != null ? '$catName · $subtitle' : subtitle;
 
-    return InkWell(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) =>
-            RecordFormPage(
-                type: record.type, existing: record, heroTag: heroTag),
-      )),
-      borderRadius: BorderRadius.circular(AppRadii.inner),
+    return PressScale(
+      scale: AppMotion.pressRow,
+      onTap: () {
+        AppHaptics.light();
+        AppRoute.push(
+          context,
+          RecordFormPage(
+              type: record.type, existing: record, heroTag: heroTag),
+        );
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         child: Row(

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
 import '../../../core/motion.dart';
+import '../../../core/haptics.dart';
 import '../../../core/hero.dart';
 import '../../../core/category_icons.dart';
 import '../../../core/icons.dart';
@@ -293,6 +294,7 @@ class _RecordFormPageState extends ConsumerState<RecordFormPage> {
         paidAt: _occurredAt,
       );
     }
+    AppHaptics.success();
     if (mounted) Navigator.of(context).pop();
   }
 

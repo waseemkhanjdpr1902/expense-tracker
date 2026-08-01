@@ -17,6 +17,10 @@ import '../../../core/search_text.dart';
 import '../../search/data/search_providers.dart';
 import '../../search/ui/searchable_app_bar.dart';
 import '../../records/ui/record_form_page.dart';
+import '../../shared/app_sheet.dart';
+import '../../shared/loading.dart';
+import '../../shared/empty_state.dart';
+import '../../../core/icons.dart';
 import '../../shared/totals_strip.dart';
 
 class LoansPage extends ConsumerStatefulWidget {
@@ -99,10 +103,9 @@ class _LoansPageState extends ConsumerState<LoansPage>
   }
 
   void _openFilterSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    AppSheet.show(
+      context,
+      transparent: true,
       builder: (_) => _LoansFilterSheet(
         initialType: _type,
         initialCategoryId: _categoryId,
@@ -264,9 +267,12 @@ class _LoansList extends ConsumerWidget {
       },
       child: XSwitcher(
       child: loans.when(
-        loading: () => const Center(
-            key: ValueKey('loans-loading'),
-            child: CircularProgressIndicator()),
+        loading: () => const DelayedVisible(
+                key: ValueKey('loans-loading'),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: SkeletonRows(rows: 4),
+                )),
         error: (e, _) => Center(
             key: const ValueKey('loans-error'), child: Text('$e')),
         data: (items) {
@@ -277,8 +283,22 @@ class _LoansList extends ConsumerWidget {
               children: [
                 SizedBox(
                   height: MediaQuery.of(context).size.height * 0.65,
-                  child: _Empty(
-                      isOutstanding: isOutstanding, query: query.query),
+                  child: EmptyState(
+                    illustration: query.query == null
+                        ? 'assets/illustrations/loans.svg'
+                        : null,
+                    icon: query.query != null ? AppIcons.noResults : null,
+                    title: query.query != null
+                        ? 'No matches for "${query.query}"'
+                        : isOutstanding
+                            ? 'No outstanding loans'
+                            : 'Nothing returned yet',
+                    message: query.query != null
+                        ? 'Try a different name or note.'
+                        : isOutstanding
+                            ? 'When you lend or borrow money, it shows up here.'
+                            : 'Loans marked as returned will appear here.',
+                  ),
                 ),
               ],
             );
@@ -516,54 +536,6 @@ class _Badge extends StatelessWidget {
       child: Text(text,
           style: AppTextStyles.caption
               .copyWith(color: fg, fontWeight: FontWeight.w600)),
-    );
-  }
-}
-
-class _Empty extends StatelessWidget {
-  const _Empty({required this.isOutstanding, this.query});
-  final bool isOutstanding;
-
-  /// Active search term, so "nothing here yet" isn't shown when the real
-  /// reason is that nothing matched what was typed.
-  final String? query;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SvgPicture.asset(
-            'assets/illustrations/loans.svg',
-            height: 140,
-            theme: SvgTheme(currentColor: context.ink),
-          ),
-          const SizedBox(height: 16),
-          Text(
-              query != null
-                  ? 'No matches for "$query"'
-                  : isOutstanding
-                      ? 'No outstanding loans'
-                      : 'Nothing returned yet',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.title.copyWith(color: context.ink)),
-          const SizedBox(height: 6),
-          Text(
-            query != null
-                ? 'Try a different name or note.'
-                : isOutstanding
-                    ? 'When you lend money, it shows up here.'
-                    : 'Loans marked as returned will appear here.',
-            style:
-                AppTextStyles.caption.copyWith(color: context.inkMuted),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
     );
   }
 }

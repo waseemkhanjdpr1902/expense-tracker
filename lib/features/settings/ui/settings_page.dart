@@ -237,7 +237,7 @@ Future<void> _openThemeSheet(
                 ].length;
                 i++) ...[
               FadeIn(
-                delay: Duration(milliseconds: 40 * i),
+                delay: AppMotion.staggerDelay(i),
                 child: _ChoiceTile(
                   icon: [
                     Icons.light_mode_rounded,
@@ -305,7 +305,7 @@ Future<void> _openCurrencySheet(
                 itemBuilder: (_, i) {
                   final c = kCurrencies[i];
                   return FadeIn(
-                    delay: Duration(milliseconds: (i * 25).clamp(0, 200)),
+                    delay: AppMotion.staggerDelay(i),
                     child: _ChoiceTile(
                       leadingText: c.flag,
                       title: '${c.code} · ${c.name}',

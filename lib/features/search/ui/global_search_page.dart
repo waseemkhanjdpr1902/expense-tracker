@@ -13,6 +13,8 @@ import '../../../data/settings_repo.dart';
 import '../../../shell/home_shell.dart';
 import '../../projects/ui/project_detail_page.dart';
 import '../../records/widgets/record_tile.dart';
+import '../../shared/empty_state.dart';
+import '../../../core/icons.dart';
 import '../../shared/section_header.dart';
 import '../data/search_providers.dart';
 import 'widgets/search_result_row.dart';
@@ -263,40 +265,6 @@ class _InitialState extends StatelessWidget {
   }
 }
 
-class _NoResults extends StatelessWidget {
-  const _NoResults({super.key, required this.query});
-  final String query;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.search_off_rounded, size: 40, color: context.inkSubtle),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'No matches for "$query"',
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.body.copyWith(color: context.ink),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Try a shorter word, a person’s name,\nor a category',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.caption.copyWith(color: context.inkSubtle),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Results ──────────────────────────────────────────────────────────────────
 
 class _Results extends ConsumerWidget {
@@ -339,7 +307,13 @@ class _Results extends ConsumerWidget {
         loans.isEmpty &&
         projects.isEmpty &&
         categories.isEmpty) {
-      return _NoResults(key: ValueKey('empty-$query'), query: query);
+      return EmptyState(
+        key: ValueKey('empty-$query'),
+        icon: AppIcons.noResults,
+        compact: true,
+        title: 'No matches for "$query"',
+        message: 'Try a shorter word, a person\u2019s name, or a category.',
+      );
     }
 
     Widget recordSection(
@@ -423,7 +397,7 @@ class _Results extends ConsumerWidget {
         // The query in the key is load-bearing: FadeIn animates on an element's
         // first build, so without it the stagger plays once and never again.
         key: ValueKey('sec-$i-$query'),
-        delay: Duration(milliseconds: 30 * i),
+        delay: AppMotion.staggerDelay(i),
         offset: 4,
         child: sections[i],
       ),

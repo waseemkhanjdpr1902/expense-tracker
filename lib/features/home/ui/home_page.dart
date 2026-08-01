@@ -20,6 +20,8 @@ import '../../search/ui/search_expand.dart';
 import '../../search/ui/search_icon_button.dart';
 import '../../records/ui/record_form_page.dart';
 import '../../records/widgets/record_tile.dart';
+import '../../shared/empty_state.dart';
+import '../../../core/routes.dart';
 import '../../shared/section_header.dart';
 
 class HomePage extends ConsumerWidget {
@@ -89,7 +91,7 @@ class HomePage extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
             FadeIn(
-              delay: const Duration(milliseconds: 40),
+              delay: AppMotion.staggerDelay(1),
               child: XSwitcher(
               child: stats.when(
                 loading: () => const _BalanceCardSkeleton(
@@ -109,12 +111,12 @@ class HomePage extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             FadeIn(
-              delay: const Duration(milliseconds: 90),
+              delay: AppMotion.staggerDelay(2),
               child: const MascotCompanion(),
             ),
             const SizedBox(height: 16),
             FadeIn(
-              delay: const Duration(milliseconds: 130),
+              delay: AppMotion.staggerDelay(3),
               child: XSwitcher(
               child: stats.maybeWhen(
                 data: (s) =>
@@ -130,7 +132,7 @@ class HomePage extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             FadeIn(
-              delay: const Duration(milliseconds: 160),
+              delay: AppMotion.staggerDelay(4),
               child: const _ChartCard(),
             ),
             const SizedBox(height: 24),
@@ -165,7 +167,19 @@ class HomePage extends ConsumerWidget {
                     Text('$e', key: const ValueKey('recent-error')),
                 data: (items) {
                   if (items.isEmpty) {
-                    return const _EmptyRecent(key: ValueKey('recent-empty'));
+                    return EmptyState(
+                      key: const ValueKey('recent-empty'),
+                      illustration: 'assets/illustrations/track.svg',
+                      boxed: true,
+                      compact: true,
+                      title: 'Nothing tracked yet',
+                      message: 'Log an expense or income to get started.',
+                      actionLabel: 'Add first record',
+                      onAction: () => AppRoute.push(
+                          context,
+                          const RecordFormPage(type: RecordType.expense),
+                          modal: true),
+                    );
                   }
                   return HeroScope(
                     name: 'home',
@@ -572,55 +586,6 @@ class _OutstandingCard extends ConsumerWidget {
   }
 }
 
-class _EmptyRecent extends StatelessWidget {
-  const _EmptyRecent({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-      decoration: BoxDecoration(
-        color: context.cardSurface,
-        border: Border.all(color: context.hairline),
-        borderRadius: BorderRadius.circular(AppRadii.card),
-        boxShadow: context.softShadow,
-      ),
-      child: Column(
-        children: [
-          SvgPicture.asset(
-            'assets/illustrations/track.svg',
-            height: 120,
-            theme: SvgTheme(currentColor: context.ink),
-          ),
-          const SizedBox(height: 12),
-          Text('Nothing tracked yet',
-              style: AppTextStyles.title.copyWith(color: context.ink)),
-          const SizedBox(height: 4),
-          Text('Tap + to log your first record.',
-              style:
-                  AppTextStyles.caption.copyWith(color: context.inkMuted)),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: context.palette.accent,
-                foregroundColor: context.palette.onAccent,
-              ),
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) =>
-                    const RecordFormPage(type: RecordType.expense),
-              )),
-              child: const Text('Add first record'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Chart Card ──────────────────────────────────────────────────────────────
-
 class _ChartCard extends ConsumerStatefulWidget {
   const _ChartCard();
 
@@ -764,7 +729,7 @@ class _ChartCardState extends ConsumerState<_ChartCard> {
 
           // ── Totals row ───────────────────────────────────────────────
           AnimatedSize(
-            duration: const Duration(milliseconds: 200),
+            duration: AppMotion.med,
             curve: Curves.easeInOut,
             alignment: Alignment.topCenter,
             child: hasTotals
@@ -930,8 +895,8 @@ class _PeriodChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeInOut,
+        duration: AppMotion.fast,
+        curve: AppMotion.enter,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
           color: selected ? context.ink : Colors.transparent,
@@ -940,7 +905,7 @@ class _PeriodChip extends StatelessWidget {
               color: selected ? context.ink : context.hairline),
         ),
         child: AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 150),
+          duration: AppMotion.fast,
           style: AppTextStyles.caption.copyWith(
             color: selected ? context.surface : context.ink,
             fontWeight: FontWeight.w600,
@@ -971,7 +936,7 @@ class _Legend extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
+        duration: AppMotion.med,
         opacity: enabled ? 1.0 : 0.4,
         child: Row(
           mainAxisSize: MainAxisSize.min,

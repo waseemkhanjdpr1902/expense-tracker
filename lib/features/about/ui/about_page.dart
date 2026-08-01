@@ -61,12 +61,12 @@ class AboutPage extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
-            FadeIn(delay: const Duration(milliseconds: 0), child: _HeaderCard()),
+            FadeIn(delay: AppMotion.staggerDelay(0), child: _HeaderCard()),
             const SizedBox(height: 16),
-            FadeIn(delay: const Duration(milliseconds: 60), child: _BioCard()),
+            FadeIn(delay: AppMotion.staggerDelay(1), child: _BioCard()),
             const SizedBox(height: 16),
             FadeIn(
-              delay: const Duration(milliseconds: 120),
+              delay: AppMotion.staggerDelay(2),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -92,7 +92,7 @@ class AboutPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             FadeIn(
-              delay: const Duration(milliseconds: 180),
+              delay: AppMotion.staggerDelay(3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

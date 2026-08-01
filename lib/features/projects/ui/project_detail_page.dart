@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/haptics.dart';
 import '../../../core/currency.dart';
 import '../../../core/formatters.dart';
 import '../../../core/theme.dart';
+import '../../shared/app_sheet.dart';
+import '../../shared/loading.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../data/settings_repo.dart';
@@ -87,7 +90,8 @@ class ProjectDetailPage extends ConsumerWidget {
       ),
       body: paymentsAsync.when(
         loading: () =>
-            const Center(child: CircularProgressIndicator()),
+            const DelayedVisible(
+              child: Center(child: CircularProgressIndicator())),
         error: (e, _) => Center(child: Text('$e')),
         data: (payments) {
           final paidMinor =
@@ -317,6 +321,7 @@ class ProjectDetailPage extends ConsumerWidget {
       ),
     );
     if (ok != true) return;
+    AppHaptics.warning();
     await ref.read(databaseProvider).deleteProject(initialProject.id);
     if (context.mounted) Navigator.of(context).pop();
   }
@@ -326,11 +331,10 @@ class ProjectDetailPage extends ConsumerWidget {
 
 Future<void> _showAddPaymentSheet(
     BuildContext context, WidgetRef ref, ProjectRow project) {
-  return showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _AddPaymentSheet(project: project),
+  return AppSheet.show(
+      context,
+      transparent: true,
+      builder: (_) => _AddPaymentSheet(project: project),
   );
 }
 

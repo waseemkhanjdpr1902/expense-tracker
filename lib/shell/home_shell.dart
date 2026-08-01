@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../core/haptics.dart';
+import '../core/motion.dart';
 import '../core/theme.dart';
 import '../data/providers.dart';
 import '../features/backup/data/backup_repo.dart';
@@ -186,8 +188,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
       _pageController
           .animateToPage(
             next.current,
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOutCubic,
+            duration: AppMotion.page,
+            curve: AppMotion.emphasized,
           )
           .whenComplete(() {
         if (mounted) _isSyncingFromProvider = false;
@@ -289,7 +291,7 @@ class _FloatingNavBarState extends State<_FloatingNavBar>
     _pillTo = widget.index.toDouble();
     _pillCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: AppMotion.page,
     )..addListener(() {
         if (mounted) setState(() {});
       });
@@ -327,7 +329,7 @@ class _FloatingNavBarState extends State<_FloatingNavBar>
   // Smooth position used by all pills.
   double get _effectivePage {
     if (_tapAnimating) {
-      final t = Curves.easeInOutCubic.transform(_pillCtrl.value);
+      final t = AppMotion.emphasized.transform(_pillCtrl.value);
       return _pillFrom + (_pillTo - _pillFrom) * t;
     }
     return widget.pageController.hasClients
@@ -378,7 +380,10 @@ class _FloatingNavBarState extends State<_FloatingNavBar>
                   _NavPill(
                     item: widget.items[i],
                     expansion: exp(i),
-                    onTap: () => widget.onTap(i),
+                    onTap: () {
+                      AppHaptics.selection();
+                      widget.onTap(i);
+                    },
                   ),
               ],
             ),
@@ -416,7 +421,7 @@ class _NavPill extends StatelessWidget {
       expansion,
     )!;
     final labelOpacity =
-        Curves.easeIn.transform(((expansion - 0.35) / 0.65).clamp(0.0, 1.0));
+        AppMotion.exit.transform(((expansion - 0.35) / 0.65).clamp(0.0, 1.0));
 
     return Flexible(
       flex: (100 + (expansion * 110)).round(),

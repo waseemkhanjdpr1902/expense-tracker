@@ -122,8 +122,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                           _finish();
                         } else {
                           _controller.nextPage(
-                            duration: const Duration(milliseconds: 280),
-                            curve: Curves.easeOutCubic,
+                            duration: AppMotion.slow,
+                            curve: AppMotion.enter,
                           );
                         }
                       },
@@ -189,7 +189,7 @@ class _SlideView extends StatelessWidget {
           const SizedBox(height: 24),
           FadeIn(
             key: ValueKey('title-${slide.title}'),
-            delay: const Duration(milliseconds: 60),
+            delay: AppMotion.staggerDelay(1),
             child: Text(slide.title,
                 style: AppTextStyles.headline
                     .copyWith(fontSize: 26, color: context.ink),
@@ -198,7 +198,7 @@ class _SlideView extends StatelessWidget {
           const SizedBox(height: 10),
           FadeIn(
             key: ValueKey('body-${slide.body}'),
-            delay: const Duration(milliseconds: 120),
+            delay: AppMotion.staggerDelay(2),
             child: Text(slide.body,
                 style: AppTextStyles.body.copyWith(color: context.inkMuted),
                 textAlign: TextAlign.center),

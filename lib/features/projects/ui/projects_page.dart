@@ -10,6 +10,11 @@ import '../../../core/theme.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../data/settings_repo.dart';
+import '../../shared/app_sheet.dart';
+import '../../shared/loading.dart';
+import '../../shared/empty_state.dart';
+import '../../../core/icons.dart';
+import '../../../core/routes.dart';
 import '../../shared/totals_strip.dart';
 import 'project_detail_page.dart';
 import 'project_form_page.dart';
@@ -90,10 +95,9 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
       _status != ProjectStatusFilter.ongoing;
 
   void _openFilterSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    AppSheet.show(
+      context,
+      transparent: true,
       builder: (_) => _ProjectFilterSheet(
         initialCategoryId: _categoryId,
         initialRange: _range,
@@ -228,75 +232,36 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
           },
           child: XSwitcher(
           child: projectsAsync.when(
-            loading: () => const Center(
+            loading: () => const DelayedVisible(
                 key: ValueKey('proj-loading'),
-                child: CircularProgressIndicator()),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: SkeletonRows(rows: 4),
+                )),
             error: (e, _) =>
                 Center(key: const ValueKey('proj-error'), child: Text('$e')),
             data: (all) {
               final items = _applyFilters(all);
               if (all.isEmpty) {
-                return ListView(
-                  key: const ValueKey('proj-empty'),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.65,
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(40),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.folder_rounded,
-                                  size: 56, color: context.inkSubtle),
-                              const SizedBox(height: 16),
-                              Text('No projects yet',
-                                  style: AppTextStyles.title
-                                      .copyWith(color: context.ink)),
-                              const SizedBox(height: 6),
-                              Text('Tap + to create your first project',
-                                  style: AppTextStyles.caption
-                                      .copyWith(color: context.inkMuted),
-                                  textAlign: TextAlign.center),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
+                return EmptyState(
+                  icon: AppIcons.projects,
+                  title: 'No projects yet',
+                  message: 'Track a project budget and its payments.',
+                  actionLabel: 'New project',
+                  onAction: () => AppRoute.push(
+                      context, const ProjectFormPage(), modal: true),
+                ).scrollable(context);
               }
               if (items.isEmpty) {
-                return ListView(
-                  key: const ValueKey('proj-filtered-empty'),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.65,
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.folder_off_rounded,
-                                size: 48, color: context.inkSubtle),
-                            const SizedBox(height: 12),
-                            Text('No projects match',
-                                style: AppTextStyles.title
-                                    .copyWith(color: context.ink)),
-                            const SizedBox(height: 4),
-                            Text(
-                                _query != null
-                                    ? 'No projects match "$_query"'
-                                    : 'Try adjusting your filters',
-                                style: AppTextStyles.caption
-                                    .copyWith(color: context.inkMuted)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                );
+                return EmptyState(
+                  icon: _query != null
+                      ? AppIcons.noResults
+                      : AppIcons.noFilterMatch,
+                  title: _query != null
+                      ? 'No projects match "$_query"'
+                      : 'No projects match',
+                  message: 'Try adjusting your filters.',
+                ).scrollable(context);
               }
               final budget =
                   items.fold<int>(0, (s, p) => s + p.totalAmountMinor);

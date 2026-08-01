@@ -163,6 +163,59 @@ header) and the scoped in-AppBar search on Records, Loans and Projects.
   Both the full-screen route and the in-AppBar field use it, which is what makes
   them read as one gesture.
 
+## Design system
+
+Everything visual is token-driven. Adding a raw colour, duration or icon
+outside these files is a regression — three tests and a grep guard exist to
+catch it.
+
+**Colour — `lib/core/theme.dart`.** `DarkTuning` / `LightTuning` are the dial:
+one base colour, a lerp ramp, label alphas, and accent shift factors. A single
+`AppPalette.of(brightness)` derives every colour from them; `AppColorsX`
+(`context.ink`, `context.hairline`, …) is a facade over it so the ~326 legacy
+call sites keep working. New code should prefer `context.palette`.
+
+- The dark base is Apple's elevated ramp (`#1C1C1E` → `#2C2C2E` → `#3A3A3C`)
+  and text is `#EBEBF5`, **not** pure white — white on near-black is 19.7:1 and
+  physically uncomfortable for sustained use.
+- The accent **derives** from `AppBrand.green`: desaturated and dimmed in dark.
+  Change the brand colour and everything re-derives.
+- `accentSoft` and `mascotBody` are **opaque**, blended once. Translucent fills
+  inherit whatever is behind them — that caused unreadable 2.11:1 text, and a
+  visible grid over the pixel-cat where its cell edges double-blended.
+- Depth in dark comes from the surface ramp, not shadows, which barely read.
+- `test/palette_contrast_test.dart` asserts every foreground/background pair
+  the palette claims, and mechanically guards "light mode must not move".
+
+**Motion — `lib/core/motion.dart`.** `AppMotion.fast/med/slow/expand/page`,
+`enter/exit/emphasized`, press scales, and `staggerDelay(i)` (30ms, capped at 8
+— uncapped, row 40 waits 1.2s and reads as broken).
+
+**Routes — `lib/core/routes.dart`.** All pushes go through `AppRoute`. Every
+platform uses `CupertinoPageTransitionsBuilder`. Note the Cupertino edge-swipe
+does *not* fire on Android — gesture navigation owns the edges — so interactive
+back comes from predictive back, enabled in the manifest.
+
+**Hero — `lib/core/hero.dart`.** Tags are namespaced by `HeroScope` because
+`RecordTile` renders in Home, Records *and* search, and Home/Records are
+adjacent `PageView` children of one route. A missing scope yields a null tag
+and no animation, never a crash.
+
+**Icons — `lib/core/icons.dart`.** Everything is `Icons.*_rounded`; `_outlined`
+only for the unselected half of a pair (the nav bar). `AppIconSize` is the only
+size scale. `iconForCategory(name)` derives a category glyph from its name — no
+schema change, works on restored backups. `test/icon_convention_test.dart`
+enforces the family.
+
+**Shared UI — `lib/features/shared/`.** `EmptyState` (one component, was seven),
+`AppSheet` (one chrome, was two), `promptForText`/`confirmDestructive` (was six
+near-identical dialogs), and `DelayedVisible`/`SkeletonRows` — local SQLite
+reads return in single-digit ms, so a spinner is a flash, not information.
+
+**Haptics — `lib/core/haptics.dart`.** `selection/light/success/warning`, named
+by meaning. At most one per user intent; never on scroll, swipe frames or in
+`build()`.
+
 ## Conventions
 
 - **Money is always `int` minor units.** Format only at the render edge via

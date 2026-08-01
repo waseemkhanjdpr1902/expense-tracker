@@ -85,6 +85,12 @@ Enable **"Install from unknown sources"** on your device, then open the APK. The
 - Reacts to your money (sparkles on income, a crumb on spend) and to you — **tap to pet** for red hearts and a rotating set of facial expressions
 
 ### Design
+- **Dark theme built on Apple's elevation ramp** — surfaces step from `#1C1C1E` to `#3A3A3C` and text is `#EBEBF5` rather than pure white. Contrast drops from 19.7:1 to 14.4:1: still far above the accessibility floor, but no longer the glare that makes a dark screen tiring
+- **The accent adapts** — the lime desaturates in dark mode instead of buzzing against the background
+- **iOS-style navigation** — every screen slides in with the outgoing page parallaxing behind it, and a record's icon flies into its detail page
+- **Haptics and press feedback** on the things you actually tap
+- **Icons that mean something** — each category picks its own glyph from its name, so a long list is scannable at a glance
+- Retuning the whole dark theme is one block of constants (see [CLAUDE.md](CLAUDE.md))
 - Material 3, fully light and dark-mode aware, with tabular figures so numbers never jitter
 - Frosted glass floating nav bar with smooth decoupled pill animation
 - Soft card depth, uppercase overline section labels, staggered entrance + press feedback
@@ -143,6 +149,10 @@ For Google Drive backup and release-signing setup, see [SETUP.md](SETUP.md).
 ## Changelog
 
 ### Unreleased
+- **A dark theme that's comfortable to use.** The old one paired near-black with pure white — measured 19.7:1, beyond even the AAA accessibility ceiling, which is what makes a dark screen tiring after a few minutes. Rebuilt on Apple's elevation ramp, with the accent desaturating in dark mode. Fixes three real bugs on the way: unreadable text on soft-green panels, a danger red that already failed contrast, and a mascot bright enough to glow
+- **Navigation that feels like iOS** — consistent slide transitions, predictive back, and a record's icon flying into its detail page
+- **Iconography** — one icon family throughout, and categories now derive their own glyph from their name
+- Haptic feedback, press states, unified empty states, and skeleton loading in place of spinner flashes
 - **Search.** Global search from Home across records, loans, projects and
   categories, plus a per-page search on Records, Loans and Projects that narrows
   the current list and keeps the totals in agreement with it

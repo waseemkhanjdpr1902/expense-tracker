@@ -6,6 +6,8 @@ import '../../../core/category_icons.dart';
 import '../../../core/icons.dart';
 import '../../../core/widgets/icon_badge.dart';
 import '../../../core/theme.dart';
+import '../../shared/app_dialogs.dart';
+import '../../shared/empty_state.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 
@@ -18,102 +20,24 @@ class CategoriesPage extends ConsumerStatefulWidget {
 
 class _CategoriesPageState extends ConsumerState<CategoriesPage> {
   Future<void> _addCategory() async {
-    String inputText = '';
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('New category'),
-        content: TextField(
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(hintText: 'e.g. Salary, Food'),
-          onChanged: (v) => inputText = v,
-          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: context.palette.accent,
-                foregroundColor: context.palette.onAccent),
-            onPressed: () => Navigator.pop(ctx, inputText.trim()),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-    if (name == null || name.isEmpty || !mounted) return;
-
-    final existing = ref
-        .read(categoriesProvider)
-        .valueOrNull
-        ?.where((c) => c.name.toLowerCase() == name.toLowerCase());
-    if (existing?.isNotEmpty == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"$name" already exists')),
-      );
-      return;
-    }
-
+    final name = await promptForText(context,
+        title: 'New category', hint: 'e.g. Food, Transport', confirmLabel: 'Add');
+    if (name == null || !mounted) return;
     await ref.read(databaseProvider).addCategory(name);
   }
 
   Future<void> _renameCategory(CategoryRow cat) async {
-    String inputText = cat.name;
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Rename category'),
-        content: TextField(
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          controller: TextEditingController(text: cat.name),
-          decoration: const InputDecoration(hintText: 'Category name'),
-          onChanged: (v) => inputText = v,
-          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: context.palette.accent,
-                foregroundColor: context.palette.onAccent),
-            onPressed: () => Navigator.pop(ctx, inputText.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    if (name == null || name.isEmpty || name == cat.name || !mounted) return;
+    final name = await promptForText(context,
+        title: 'Rename category', initial: cat.name);
+    if (name == null || !mounted) return;
     await ref.read(databaseProvider).renameCategory(cat.id, name);
   }
 
   Future<void> _deleteCategory(CategoryRow cat) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete "${cat.name}"?'),
-        content: const Text(
-            'Existing records and projects with this category will become uncategorized.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: context.palette.danger,
-                foregroundColor: context.palette.onDanger),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
+    final ok = await confirmDestructive(context,
+        title: 'Delete "${cat.name}"?',
+        message: 'Records keep their history but lose this category.');
+    if (!ok || !mounted) return;
     await ref.read(databaseProvider).deleteCategory(cat.id);
   }
 
@@ -135,23 +59,13 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
         bottom: false,
         child: XSwitcher(
           child: cats.isEmpty
-              ? Center(
+              ? EmptyState(
                   key: const ValueKey('cats-empty'),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(AppIcons.category,
-                          size: AppIconSize.empty, color: context.inkSubtle),
-                      const SizedBox(height: 16),
-                      Text('No categories yet',
-                          style:
-                              AppTextStyles.title.copyWith(color: context.ink)),
-                      const SizedBox(height: 6),
-                      Text('Tap + to add your first category',
-                          style: AppTextStyles.caption
-                              .copyWith(color: context.inkMuted)),
-                    ],
-                  ),
+                  icon: AppIcons.category,
+                  title: 'No categories yet',
+                  message: 'Group your spending to see where it goes.',
+                  actionLabel: 'Add category',
+                  onAction: _addCategory,
                 )
               : ListView.separated(
                   key: const ValueKey('cats-list'),

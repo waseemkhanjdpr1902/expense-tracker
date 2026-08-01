@@ -18,6 +18,27 @@ class AppMotion {
 
   /// Reverse curve for [expand] — decelerating out mirrors easing in.
   static const Curve expandReverse = Curves.easeInCubic;
+
+  /// Full-viewport travel inside the shell (tab slide, nav pill). Longer than
+  /// [slow] because it crosses the whole screen.
+  static const Duration page = Duration(milliseconds: 400);
+
+  /// Symmetric accelerate-decelerate, for movement that starts and ends at
+  /// rest — as opposed to [enter], which is for things arriving.
+  static const Curve emphasized = Curves.easeInOutCubic;
+
+  // ── Press feedback ──────────────────────────────────────────────────────
+  /// Full-width rows: subtle, because a large surface exaggerates scale.
+  static const double pressRow = 0.98;
+  static const double pressCard = 0.97;
+  /// Small square targets can afford more travel.
+  static const double pressTile = 0.96;
+
+  /// Entrance stagger step, **capped**: uncapped, row 40 waits 1.2s and the
+  /// list reads as broken rather than choreographed.
+  static const Duration stagger = Duration(milliseconds: 30);
+  static Duration staggerDelay(int index, {int cap = 8}) =>
+      stagger * index.clamp(0, cap);
 }
 
 /// Fade + slight upward slide on first build. Cheap, no controller.

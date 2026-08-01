@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/haptics.dart';
+import '../../../core/icons.dart';
 import '../../../core/hero.dart';
 import '../../../core/currency.dart';
 import '../../../core/date_range.dart';
@@ -10,6 +12,9 @@ import '../../../core/theme.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../data/settings_repo.dart';
+import '../../shared/app_sheet.dart';
+import '../../shared/empty_state.dart';
+import '../../shared/loading.dart';
 import '../../shared/totals_strip.dart';
 import '../widgets/record_tile.dart';
 import '../../../core/debounce.dart';
@@ -130,10 +135,9 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
       _range != DateRangeFilter.month;
 
   void _openFilterSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    AppSheet.show(
+      context,
+      transparent: true,
       builder: (_) => _FilterSheet(
         initialType: _filter,
         initialCategoryId: _selectedCategoryId,
@@ -284,9 +288,12 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
             child: XSwitcher(
           child: effectiveRecords.when(
             skipLoadingOnReload: true,
-            loading: () => const Center(
+            loading: () => const DelayedVisible(
                 key: ValueKey('rec-loading'),
-                child: CircularProgressIndicator()),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(14, 12, 14, 0),
+                  child: SkeletonRows(),
+                )),
             error: (e, _) =>
                 Center(key: const ValueKey('rec-error'), child: Text('$e')),
             data: (items) {
@@ -294,34 +301,27 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
               _lastCount = items.length;
 
               if (items.isEmpty) {
-                return ListView(
-                  key: const ValueKey('rec-empty'),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    const SizedBox(height: 160),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.receipt_long_rounded,
-                            size: 48, color: context.inkSubtle),
-                        const SizedBox(height: 12),
-                        Text('No records found',
-                            style: AppTextStyles.title
-                                .copyWith(color: context.ink)),
-                        const SizedBox(height: 4),
-                        Text(
-                          _query != null
-                              ? 'No records match "$_query"'
-                              : _hasActiveFilters
-                                  ? 'Try adjusting your filters'
-                                  : 'Tap + to add your first record',
-                          style: AppTextStyles.caption
-                              .copyWith(color: context.inkMuted),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
+                return EmptyState(
+                  icon: _query != null
+                      ? AppIcons.noResults
+                      : AppIcons.records,
+                  title: _query != null
+                      ? 'No records match "$_query"'
+                      : _hasActiveFilters
+                          ? 'No records here'
+                          : 'No records yet',
+                  message: _query != null
+                      ? 'Try a different word or clear the search.'
+                      : _hasActiveFilters
+                          ? 'Try adjusting your filters.'
+                          : 'Track your first expense or income.',
+                  actionLabel: (_query == null && !_hasActiveFilters)
+                      ? 'Add a record'
+                      : null,
+                  onAction: (_query == null && !_hasActiveFilters)
+                      ? () => openAddRecordSheet(context)
+                      : null,
+                ).scrollable(context);
               }
 
               final groups = _groupByDay(items);
@@ -442,7 +442,10 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                                 ) ??
                                 false,
                             onDismissed: (_) =>
-                                ref.read(databaseProvider).deleteRecord(r.id),
+                                {
+                              AppHaptics.warning(),
+                              ref.read(databaseProvider).deleteRecord(r.id),
+                            },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 14),
