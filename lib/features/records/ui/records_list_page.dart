@@ -11,6 +11,10 @@ import '../../../data/providers.dart';
 import '../../../data/settings_repo.dart';
 import '../../shared/totals_strip.dart';
 import '../widgets/record_tile.dart';
+import '../../../core/debounce.dart';
+import '../../../core/search_text.dart';
+import '../../search/data/search_providers.dart';
+import '../../search/ui/searchable_app_bar.dart';
 import 'add_record_sheet.dart';
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -23,9 +27,25 @@ class RecordsListPage extends ConsumerStatefulWidget {
 }
 
 class _RecordsListPageState extends ConsumerState<RecordsListPage>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   @override
   bool get wantKeepAlive => true;
+
+  // ── Scoped search ──────────────────────────────────────────────────────────
+  final _searchController = TextEditingController();
+  final _searchFocus = FocusNode();
+  final _searchDebounce = Debouncer();
+  late final AnimationController _searchAnim = AnimationController(
+    vsync: this,
+    duration: AppMotion.expand,
+    reverseDuration: AppMotion.slow,
+  );
+  String? _query;
+
+  /// Last good data, kept so an autoDispose reload doesn't flash a spinner on
+  /// every keystroke.
+  List<RecordRow>? _lastItems;
+  RecordsTotals? _lastTotals;
 
   RecordsFilter _filter = RecordsFilter.all;
   DateRangeFilter _range = DateRangeFilter.month;
@@ -50,7 +70,48 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _searchController.dispose();
+    _searchFocus.dispose();
+    _searchDebounce.dispose();
+    _searchAnim.dispose();
+    // Never leave a stale back-interceptor pointing at a dead State.
+    ref.read(searchBackInterceptorProvider.notifier).state = null;
     super.dispose();
+  }
+
+  // ── Scoped search plumbing ─────────────────────────────────────────────────
+
+  void _openSearch() {
+    _searchAnim.forward();
+    ref.read(searchBackInterceptorProvider.notifier).state = _closeSearch;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocus.requestFocus();
+    });
+  }
+
+  void _closeSearch() {
+    _searchFocus.unfocus();
+    _searchAnim.reverse();
+    ref.read(searchBackInterceptorProvider.notifier).state = null;
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _searchDebounce.cancel();
+    setState(() {
+      _query = null;
+      _limit = _pageSize;
+    });
+    _closeSearch();
+  }
+
+  void _setQuery(String raw) {
+    final next = normalizeQuery(raw);
+    if (next == _query) return;
+    setState(() {
+      _query = next;
+      _limit = _pageSize; // a new query restarts pagination
+    });
   }
 
   void _onScroll() {
@@ -97,22 +158,79 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // Deep-link from global search: arrive with the query already applied and
+    // the field open.
+    // Deep-link from global search. Uses `watch`, not `listen`: the shell's
+    // PageView builds pages lazily, so a page that had never been built yet
+    // would miss the change entirely — `listen` only fires on transitions
+    // observed while already listening. Applying post-frame (setState is
+    // illegal during build) and clearing the provider makes this run once.
+    final pending = ref.watch(pendingSearchProvider);
+    if (pending != null && pending.tab == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _query = pending.query;
+          _searchController.text = pending.query;
+          if (pending.recordsType != null) _filter = pending.recordsType!;
+          if (pending.categoryId != null) {
+            _selectedCategoryId = pending.categoryId;
+          }
+          _limit = _pageSize;
+        });
+        _searchAnim.value = 1;
+        ref.read(searchBackInterceptorProvider.notifier).state = _closeSearch;
+        ref.read(pendingSearchProvider.notifier).state = null;
+      });
+    }
+
     final records = ref.watch(filteredRecordsProvider(RecordsQuery(
       type: _filter,
       range: _range,
       categoryId: _selectedCategoryId,
       limit: _limit,
+      query: _query,
     )));
     final currency = ref.watch(currencyProvider);
+    // Unlimited, so the board stays exact regardless of pagination — and it
+    // carries the same query so list and totals can never disagree.
     final totals = ref.watch(filteredTotalsProvider(RecordsTotalsQuery(
       type: _filter,
       range: _range,
       categoryId: _selectedCategoryId,
+      query: _query,
     )));
+    if (records.hasValue) _lastItems = records.value;
+    if (totals.hasValue) _lastTotals = totals.value;
+
+    // Changing the query changes the autoDispose family key, which means a
+    // brand-new provider starting in AsyncLoading — a spinner flash on every
+    // keystroke. Substitute the last good value and dim instead.
+    final effectiveRecords = records.hasValue
+        ? records
+        : (_lastItems != null
+            ? AsyncData<List<RecordRow>>(_lastItems!)
+            : records);
+    final effectiveTotals = totals.hasValue
+        ? totals
+        : (_lastTotals != null
+            ? AsyncData<RecordsTotals>(_lastTotals!)
+            : totals);
+    final isStale = records.isLoading && _lastItems != null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Records'),
+      appBar: SearchableAppBar(
+        title: 'Records',
+        animation: _searchAnim,
+        controller: _searchController,
+        focusNode: _searchFocus,
+        query: _query,
+        onQueryChanged: (raw) =>
+            _searchDebounce(() => mounted ? _setQuery(raw) : null),
+        onSubmitted: (raw) => _searchDebounce.flush(() => _setQuery(raw)),
+        onOpen: _openSearch,
+        onClose: _closeSearch,
+        onClear: _clearSearch,
         actions: [
           IconButton(
             tooltip: 'Filter',
@@ -157,8 +275,11 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
               limit: _limit,
             )).future);
           },
-          child: XSwitcher(
-          child: records.when(
+          child: AnimatedOpacity(
+            opacity: isStale ? 0.55 : 1,
+            duration: AppMotion.fast,
+            child: XSwitcher(
+          child: effectiveRecords.when(
             skipLoadingOnReload: true,
             loading: () => const Center(
                 key: ValueKey('rec-loading'),
@@ -186,9 +307,11 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                                 .copyWith(color: context.ink)),
                         const SizedBox(height: 4),
                         Text(
-                          _hasActiveFilters
-                              ? 'Try adjusting your filters'
-                              : 'Tap + to add your first record',
+                          _query != null
+                              ? 'No records match "$_query"'
+                              : _hasActiveFilters
+                                  ? 'Try adjusting your filters'
+                                  : 'Tap + to add your first record',
                           style: AppTextStyles.caption
                               .copyWith(color: context.inkMuted),
                         ),
@@ -210,7 +333,7 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                 itemBuilder: (_, i) {
                   // ── Totals strip (index 0) ────────────────────────────────
                   if (i == 0) {
-                    return totals.maybeWhen(
+                    return effectiveTotals.maybeWhen(
                       data: (t) => t.incomeMinor == 0 && t.expenseMinor == 0
                           ? const SizedBox.shrink()
                           : _recordsBoard(t, currency),
@@ -331,6 +454,7 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                 },
               );
             },
+          ),
           ),
           ),
         ),

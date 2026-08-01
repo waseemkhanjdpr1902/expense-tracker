@@ -2,8 +2,19 @@ import 'package:flutter/material.dart' show DateTimeRange;
 
 sealed class DateRangeFilter {
   const DateRangeFilter();
+
+  /// A concrete window. Every variant can produce one; [_All] returns a
+  /// deliberately huge window as a safety net for callers that cannot handle
+  /// "no bound".
   DateTimeRange resolve(DateTime now);
 
+  /// The window to apply, or `null` when this filter imposes **no** date bound
+  /// at all. Query layers should prefer this and pass
+  /// `from: r?.start, to: r?.end` — [AppDatabase.watchRecords] skips null
+  /// bounds, so an unbounded filter emits no date predicates at all.
+  DateTimeRange? resolveOrNull(DateTime now) => resolve(now);
+
+  static const DateRangeFilter all = _All();
   static const DateRangeFilter day = _Rolling.day();
   static const DateRangeFilter week = _Rolling(days: 7, label: '1W');
   static const DateRangeFilter month = _Rolling(days: 30, label: '1M');
@@ -13,6 +24,31 @@ sealed class DateRangeFilter {
   factory DateRangeFilter.custom(DateTime start, DateTime end) = _Custom;
 
   String get label;
+}
+
+/// No date bound at all. The default on the Loans and Projects screens so that
+/// long-outstanding rows are never invisible.
+class _All extends DateRangeFilter {
+  const _All();
+
+  @override
+  String get label => 'All';
+
+  /// Safety net only — real query paths use [resolveOrNull].
+  @override
+  DateTimeRange resolve(DateTime now) => DateTimeRange(
+        start: DateTime(1970),
+        end: DateTime(now.year + 100),
+      );
+
+  @override
+  DateTimeRange? resolveOrNull(DateTime _) => null;
+
+  @override
+  bool operator ==(Object o) => o is _All;
+
+  @override
+  int get hashCode => 0x0A11;
 }
 
 class _Rolling extends DateRangeFilter {
@@ -85,6 +121,9 @@ class _Custom extends DateRangeFilter {
   @override
   int get hashCode => Object.hash(start, end);
 }
+
+/// True iff this filter imposes no date bound at all.
+bool isAllTime(DateRangeFilter f) => f is _All;
 
 /// True iff this filter is a specific calendar year (not a rolling window).
 bool isCalendarYear(DateRangeFilter f) => f is _CalendarYear;

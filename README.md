@@ -49,13 +49,31 @@ Enable **"Install from unknown sources"** on your device, then open the APK. The
 ### Loans
 - Track money lent to others and money borrowed from others
 - Mark as returned / repaid; history preserved in Returned tab
-- Filter by date range
+- **Shows every outstanding loan by default** — an "All" date option means a debt from six months ago can't quietly fall off the screen
+- Filter by type, category and date range
 
 ### Projects
 - Create projects with name, description, start/end dates, total budget, advance payment, and category
+- **Mark complete / re-open** — completion is your call, not the maths. A project stays ongoing until you say it's done, even when fully paid, and can be marked done while money is still owed
+- **Status filter** — All / Ongoing / Completed, defaulting to Ongoing so finished work drops out of the list
+- Each card shows what's still **remaining** (or "Fully paid" / "extra" when overpaid)
 - Vertical payment timeline — tap to add further payments at any time
 - **Payments count as income** — the advance and every later payment flow straight into your available balance and appear in Recent Activity (recorded as income, tagged with the project name)
 - Filter by category and date range
+
+### Search
+- **Global search** from the Home header — one field across expenses, income,
+  loans, projects and categories, grouped by section with a "See all" that opens
+  the right tab already filtered
+- Opens with an **expand-from-the-icon** transition and closes back into it
+- Matches descriptions, counterparty names, project names and **category names**
+  — searching "groceries" finds everything filed under Groceries even when the
+  word appears in no description
+- Matched text is highlighted in the results
+- **Per-page search** on Records, Loans and Projects: narrows the list you're
+  already looking at, stacks with the active filters, and the totals boards
+  recompute to match. Swipe-to-delete, edit and mark-repaid keep working
+- Punctuation is literal — searching `30%` finds "Advance — 30%", not everything
 
 ### Finance Summary
 - Records page shows income / expense / net totals for the current filter — updates live as filters change
@@ -88,6 +106,24 @@ Enable **"Install from unknown sources"** on your device, then open the APK. The
 
 Flutter · Riverpod 2 · Drift (SQLite) · fl_chart · `google_sign_in` · `googleapis` · Material 3
 
+All data lives in a local SQLite database (`xpense.sqlite`) on the device; settings live in
+`SharedPreferences`. Nothing leaves the phone unless you turn on Drive backup.
+
+### How it's organised
+
+```text
+lib/
+  main.dart      # loads persisted settings before the first frame
+  app.dart       # MaterialApp + onboarding gate
+  shell/         # 5-tab PageView, floating nav bar, auto-backup triggers
+  core/          # theme, motion, currency, date-range and formatting primitives
+  data/          # drift database (schema v6), providers, settings repos
+  features/      # home · records · loans · projects · search · settings · backup
+                 # about · onboarding · mascot (Xpy) · shared widgets
+```
+
+Architecture notes, invariants and conventions for contributors: [CLAUDE.md](CLAUDE.md).
+
 ---
 
 ## Build from Source
@@ -105,6 +141,23 @@ For Google Drive backup and release-signing setup, see [SETUP.md](SETUP.md).
 ---
 
 ## Changelog
+
+### Unreleased
+- **Search.** Global search from Home across records, loans, projects and
+  categories, plus a per-page search on Records, Loans and Projects that narrows
+  the current list and keeps the totals in agreement with it
+- **Projects: mark complete / re-open.** Completion is an explicit decision, not
+  "you've been paid in full" — a project can be delivered while money is still
+  owed, or fully paid while work continues
+- **Projects: All / Ongoing / Completed filter**, defaulting to Ongoing
+- **Project cards show what's remaining** — no more subtracting in your head
+- **Loans and Projects default to "All" dates.** Previously Loans showed only
+  the last 30 days, so an unpaid loan from three months ago was invisible on the
+  screen whose whole job is tracking it
+- Project detail now updates in place after an edit or a status change (it used
+  to show a stale snapshot until you left and came back)
+- Database schema 5 → 6. Older backups restore fine on this version; a backup
+  made *by* this version can't be restored onto an older build until it updates
 
 ### [v1.0.2](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.2)
 - **Meet Xpy** — a code-drawn pixel-cat companion on the home screen. Its mood follows your month's net (saving = happy, overspending = worried, quiet = sleepy); it breathes, blinks, looks around, twitches its ears, yawns, wags, hops and takes little walks on its own; reacts when your balance moves (sparkles for income, red hearts when you pet it); and cycles fun expressions (wink, ^_^, O_O, heart-eyes, star-eyes, tongue, dizzy) each time you tap it

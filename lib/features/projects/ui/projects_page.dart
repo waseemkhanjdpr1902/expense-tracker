@@ -12,6 +12,10 @@ import '../../../data/settings_repo.dart';
 import '../../shared/totals_strip.dart';
 import 'project_detail_page.dart';
 import 'project_form_page.dart';
+import '../../../core/debounce.dart';
+import '../../../core/search_text.dart';
+import '../../search/data/search_providers.dart';
+import '../../search/ui/searchable_app_bar.dart';
 
 class ProjectsPage extends ConsumerStatefulWidget {
   const ProjectsPage({super.key});
@@ -21,15 +25,68 @@ class ProjectsPage extends ConsumerStatefulWidget {
 }
 
 class _ProjectsPageState extends ConsumerState<ProjectsPage>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   @override
   bool get wantKeepAlive => true;
 
-  String? _categoryId;
-  DateRangeFilter _range = DateRangeFilter.year;
+  // ── Scoped search ──────────────────────────────────────────────────────────
+  final _searchController = TextEditingController();
+  final _searchFocus = FocusNode();
+  final _searchDebounce = Debouncer();
+  late final AnimationController _searchAnim = AnimationController(
+    vsync: this,
+    duration: AppMotion.expand,
+    reverseDuration: AppMotion.slow,
+  );
+  String? _query;
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocus.dispose();
+    _searchDebounce.dispose();
+    _searchAnim.dispose();
+    ref.read(searchBackInterceptorProvider.notifier).state = null;
+    super.dispose();
+  }
+
+  void _openSearch() {
+    _searchAnim.forward();
+    ref.read(searchBackInterceptorProvider.notifier).state = _closeSearch;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocus.requestFocus();
+    });
+  }
+
+  void _closeSearch() {
+    _searchFocus.unfocus();
+    _searchAnim.reverse();
+    ref.read(searchBackInterceptorProvider.notifier).state = null;
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _searchDebounce.cancel();
+    setState(() => _query = null);
+    _closeSearch();
+  }
+
+  void _setQuery(String raw) {
+    final next = normalizeQuery(raw);
+    if (next == _query) return;
+    setState(() => _query = next);
+  }
+
+  String? _categoryId;
+  DateRangeFilter _range = DateRangeFilter.all;
+  ProjectStatusFilter _status = ProjectStatusFilter.ongoing;
+
+  // "Active" means "differs from the defaults" — both new defaults must appear
+  // here or a fresh launch shows the green dot permanently.
   bool get _hasActiveFilters =>
-      _categoryId != null || _range != DateRangeFilter.year;
+      _categoryId != null ||
+      _range != DateRangeFilter.all ||
+      _status != ProjectStatusFilter.ongoing;
 
   void _openFilterSheet() {
     showModalBottomSheet(
@@ -39,27 +96,46 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
       builder: (_) => _ProjectFilterSheet(
         initialCategoryId: _categoryId,
         initialRange: _range,
-        onChanged: (categoryId, range) {
+        initialStatus: _status,
+        onChanged: (categoryId, range, status) {
           setState(() {
             _categoryId = categoryId;
             _range = range;
+            _status = status;
           });
         },
         onReset: () => setState(() {
           _categoryId = null;
-          _range = DateRangeFilter.year;
+          _range = DateRangeFilter.all;
+          _status = ProjectStatusFilter.ongoing;
         }),
       ),
     );
   }
 
   List<ProjectRow> _applyFilters(List<ProjectRow> all) {
-    final now = DateTime.now();
-    final resolved = _range.resolve(now);
+    // Null range = no date bound at all (the "All" chip).
+    final resolved = _range.resolveOrNull(DateTime.now());
+    final q = normalizeQuery(_query)?.toLowerCase();
     return all.where((p) {
       if (_categoryId != null && p.categoryId != _categoryId) return false;
-      if (p.startDate.isBefore(resolved.start) ||
-          p.startDate.isAfter(resolved.end)) return false;
+      switch (_status) {
+        case ProjectStatusFilter.ongoing:
+          if (p.completedAt != null) return false;
+        case ProjectStatusFilter.completed:
+          if (p.completedAt == null) return false;
+        case ProjectStatusFilter.all:
+          break;
+      }
+      if (resolved != null &&
+          (p.startDate.isBefore(resolved.start) ||
+              p.startDate.isAfter(resolved.end))) {
+        return false;
+      }
+      if (q != null &&
+          !'${p.name} ${p.description ?? ''}'.toLowerCase().contains(q)) {
+        return false;
+      }
       return true;
     }).toList();
   }
@@ -67,14 +143,45 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // Deep-link from global search. Uses `watch`, not `listen`: the shell's
+    // PageView builds pages lazily, so a page that had never been built yet
+    // would miss the change entirely — `listen` only fires on transitions
+    // observed while already listening. Applying post-frame (setState is
+    // illegal during build) and clearing the provider makes this run once.
+    final pending = ref.watch(pendingSearchProvider);
+    if (pending != null && pending.tab == 3) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _query = pending.query;
+          _searchController.text = pending.query;
+          if (pending.categoryId != null) _categoryId = pending.categoryId;
+        });
+        _searchAnim.value = 1;
+        ref.read(searchBackInterceptorProvider.notifier).state = _closeSearch;
+        ref.read(pendingSearchProvider.notifier).state = null;
+      });
+    }
+
     final projectsAsync = ref.watch(projectsProvider);
     final currency = ref.watch(currencyProvider);
     final received =
         ref.watch(receivedByProjectProvider).valueOrNull ?? const {};
+    final cats = ref.watch(categoriesProvider).valueOrNull ?? const [];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Projects'),
+      appBar: SearchableAppBar(
+        title: 'Projects',
+        animation: _searchAnim,
+        controller: _searchController,
+        focusNode: _searchFocus,
+        query: _query,
+        onQueryChanged: (raw) =>
+            _searchDebounce(() => mounted ? _setQuery(raw) : null),
+        onSubmitted: (raw) => _searchDebounce.flush(() => _setQuery(raw)),
+        onOpen: _openSearch,
+        onClose: _closeSearch,
+        onClear: _clearSearch,
         actions: [
           IconButton(
             tooltip: 'Filter',
@@ -175,7 +282,10 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
                                 style: AppTextStyles.title
                                     .copyWith(color: context.ink)),
                             const SizedBox(height: 4),
-                            Text('Try adjusting your filters',
+                            Text(
+                                _query != null
+                                    ? 'No projects match "$_query"'
+                                    : 'Try adjusting your filters',
                                 style: AppTextStyles.caption
                                     .copyWith(color: context.inkMuted)),
                           ],
@@ -219,17 +329,26 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
                     );
                   }
                   final project = items[i - 1];
+                  // Paid comes from the page's existing grouped-sum stream —
+                  // no per-card subscription, and it can never disagree with
+                  // the summary board above.
+                  final catName = cats
+                      .where((c) => c.id == project.categoryId)
+                      .map((c) => c.name)
+                      .firstOrNull;
                   return Padding(
                     padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
                     child: FadeIn(
                       key: ValueKey(project.id),
-                      child: _ProjectCard(
+                      child: _CardShell(
                         project: project,
+                        catName: catName,
                         currency: currency,
+                        paidMinor: received[project.id] ?? 0,
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) =>
-                                ProjectDetailPage(project: project),
+                                ProjectDetailPage(initialProject: project),
                           ),
                         ),
                       ),
@@ -248,46 +367,6 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
 
 // ── Project card ──────────────────────────────────────────────────────────────
 
-class _ProjectCard extends ConsumerWidget {
-  const _ProjectCard({
-    required this.project,
-    required this.currency,
-    required this.onTap,
-  });
-  final ProjectRow project;
-  final CurrencyOption currency;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final paymentsAsync = ref.watch(projectPaymentsProvider(project.id));
-    final cats = ref.watch(categoriesProvider).valueOrNull ?? [];
-    final catName = cats
-        .where((c) => c.id == project.categoryId)
-        .map((c) => c.name)
-        .firstOrNull;
-
-    return paymentsAsync.when(
-      loading: () => _CardShell(
-          project: project, catName: catName, onTap: onTap,
-          currency: currency, paidMinor: 0),
-      error: (_, __) => _CardShell(
-          project: project, catName: catName, onTap: onTap,
-          currency: currency, paidMinor: 0),
-      data: (payments) {
-        final paid = payments.fold(0, (s, p) => s + p.amountMinor);
-        return _CardShell(
-          project: project,
-          catName: catName,
-          onTap: onTap,
-          currency: currency,
-          paidMinor: paid,
-        );
-      },
-    );
-  }
-}
-
 class _CardShell extends StatelessWidget {
   const _CardShell({
     required this.project,
@@ -304,9 +383,18 @@ class _CardShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress =
-        (paidMinor / project.totalAmountMinor).clamp(0.0, 1.0);
+    // Guard the divide: a zero-budget project would yield NaN and trip
+    // LinearProgressIndicator's assert.
+    final progress = project.totalAmountMinor > 0
+        ? (paidMinor / project.totalAmountMinor).clamp(0.0, 1.0)
+        : 0.0;
     final isDone = paidMinor >= project.totalAmountMinor;
+    final remaining = project.totalAmountMinor - paidMinor;
+    final remainingLabel = remaining > 0
+        ? '${formatMoney(remaining, currency)} remaining'
+        : remaining == 0
+            ? 'Fully paid'
+            : '${formatMoney(-remaining, currency)} extra';
 
     return InkWell(
       onTap: onTap,
@@ -386,6 +474,19 @@ class _CardShell extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 4),
+            // Right-aligned so it reads as a continuation of "of <total>".
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                remainingLabel,
+                style: AppTextStyles.caption.copyWith(
+                  color: remaining <= 0 ? AppColors.green : context.inkMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
             if (project.endDate != null) ...[
               const SizedBox(height: 6),
               Text(
@@ -407,12 +508,14 @@ class _ProjectFilterSheet extends ConsumerStatefulWidget {
   const _ProjectFilterSheet({
     required this.initialCategoryId,
     required this.initialRange,
+    required this.initialStatus,
     required this.onChanged,
     required this.onReset,
   });
   final String? initialCategoryId;
   final DateRangeFilter initialRange;
-  final void Function(String?, DateRangeFilter) onChanged;
+  final ProjectStatusFilter initialStatus;
+  final void Function(String?, DateRangeFilter, ProjectStatusFilter) onChanged;
   final VoidCallback onReset;
 
   @override
@@ -423,6 +526,7 @@ class _ProjectFilterSheet extends ConsumerStatefulWidget {
 class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
   late String? _categoryId;
   late DateRangeFilter _quickRange;
+  late ProjectStatusFilter _status;
   bool _isCustom = false;
   DateTime? _customStart;
   DateTime? _customEnd;
@@ -431,12 +535,13 @@ class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
   void initState() {
     super.initState();
     _categoryId = widget.initialCategoryId;
+    _status = widget.initialStatus;
     if (isCustomRange(widget.initialRange)) {
       _isCustom = true;
       final r = widget.initialRange.resolve(DateTime.now());
       _customStart = r.start;
       _customEnd = r.end;
-      _quickRange = DateRangeFilter.year;
+      _quickRange = DateRangeFilter.all;
     } else {
       _quickRange = widget.initialRange;
     }
@@ -452,14 +557,17 @@ class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
   bool get _hasActiveFilters =>
       _categoryId != null ||
       _isCustom ||
-      _quickRange != DateRangeFilter.year;
+      _quickRange != DateRangeFilter.all ||
+      _status != ProjectStatusFilter.ongoing;
 
-  void _notify() => widget.onChanged(_categoryId, _effectiveRange);
+  void _notify() =>
+      widget.onChanged(_categoryId, _effectiveRange, _status);
 
   void _reset() {
     setState(() {
       _categoryId = null;
-      _quickRange = DateRangeFilter.year;
+      _status = ProjectStatusFilter.ongoing;
+      _quickRange = DateRangeFilter.all;
       _isCustom = false;
       _customStart = null;
       _customEnd = null;
@@ -596,6 +704,30 @@ class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
               ),
               const SizedBox(height: 24),
 
+              // ── Status ────────────────────────────────────────────────────
+              _sectionLabel('Status'),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final (label, value) in const [
+                    ('All', ProjectStatusFilter.all),
+                    ('Ongoing', ProjectStatusFilter.ongoing),
+                    ('Completed', ProjectStatusFilter.completed),
+                  ])
+                    _Chip(
+                      label: label,
+                      selected: _status == value,
+                      onTap: () {
+                        setState(() => _status = value);
+                        _notify();
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
               // ── Category ──────────────────────────────────────────────────
               _sectionLabel('Category'),
               const SizedBox(height: 10),
@@ -634,6 +766,17 @@ class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  _Chip(
+                    label: 'All',
+                    selected: !_isCustom && _quickRange == DateRangeFilter.all,
+                    onTap: () {
+                      setState(() {
+                        _isCustom = false;
+                        _quickRange = DateRangeFilter.all;
+                      });
+                      _notify();
+                    },
+                  ),
                   _Chip(
                     label: '1W',
                     selected:

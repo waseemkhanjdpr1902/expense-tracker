@@ -15,6 +15,7 @@ import '../features/home/ui/home_page.dart';
 import '../features/loans/ui/loans_page.dart';
 import '../features/projects/ui/projects_page.dart';
 import '../features/records/ui/records_list_page.dart';
+import '../features/search/data/search_providers.dart';
 import '../features/settings/ui/settings_page.dart';
 
 /// State for the bottom-nav: current tab + history stack of previously
@@ -197,6 +198,14 @@ class _HomeShellState extends ConsumerState<HomeShell>
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
+        // A page with its scoped search field open collapses that first. This
+        // shell owns the only PopScope — a nested one would fire both handlers
+        // and close search *and* change tab on a single back press.
+        final collapseSearch = ref.read(searchBackInterceptorProvider);
+        if (collapseSearch != null) {
+          collapseSearch();
+          return;
+        }
         final nav = ref.read(shellNavProvider.notifier);
         if (nav.popTab()) return;
         if (_exitArmed) {
@@ -217,6 +226,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
       },
       child: Scaffold(
         extendBody: true,
+        // The floating nav bar would otherwise ride up above the keyboard when
+        // a scoped search field is focused. Inner page Scaffolds still resize.
+        resizeToAvoidBottomInset: false,
         body: PageView(
           controller: _pageController,
           physics: const ClampingScrollPhysics(),

@@ -11,11 +11,18 @@ import '../../../data/settings_repo.dart';
 import 'project_form_page.dart';
 
 class ProjectDetailPage extends ConsumerWidget {
-  const ProjectDetailPage({super.key, required this.project});
-  final ProjectRow project;
+  const ProjectDetailPage({super.key, required this.initialProject});
+
+  /// Snapshot handed over from the list — used only until the live row
+  /// arrives, so edits and completion changes refresh in place.
+  final ProjectRow initialProject;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final project =
+        ref.watch(projectByIdProvider(initialProject.id)).valueOrNull ??
+            initialProject;
+    final isCompleted = project.completedAt != null;
     final paymentsAsync = ref.watch(projectPaymentsProvider(project.id));
     final currency = ref.watch(currencyProvider);
     final cats = ref.watch(categoriesProvider).valueOrNull ?? [];
@@ -29,14 +36,52 @@ class ProjectDetailPage extends ConsumerWidget {
         title: Text(project.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
+            tooltip: 'Edit project',
             icon: const Icon(Icons.edit_outlined),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => ProjectFormPage(existing: project),
             )),
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () => _confirmDelete(context, ref),
+          PopupMenuButton<String>(
+            tooltip: 'More actions',
+            icon: const Icon(Icons.more_vert),
+            onSelected: (v) {
+              if (v == 'status') {
+                _toggleCompleted(context, ref, project);
+              } else if (v == 'delete') {
+                _confirmDelete(context, ref);
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'status',
+                child: Row(
+                  children: [
+                    Icon(
+                      isCompleted
+                          ? Icons.undo_rounded
+                          : Icons.check_circle_outline,
+                      size: 20,
+                      color: context.ink,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(isCompleted ? 'Re-open project' : 'Mark complete'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_outline,
+                        size: 20, color: AppColors.danger),
+                    const SizedBox(width: 12),
+                    Text('Delete',
+                        style: TextStyle(color: AppColors.danger)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -60,7 +105,8 @@ class ProjectDetailPage extends ConsumerWidget {
                 margin: const EdgeInsets.only(top: 16, bottom: 24),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: isDone ? AppColors.greenSoft : Colors.transparent,
+                  color:
+                      isCompleted ? AppColors.greenSoft : Colors.transparent,
                   border: Border.all(color: context.hairline),
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -101,18 +147,26 @@ class ProjectDetailPage extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        if (isDone)
+                        // Two different ideas: `isCompleted` is the user's
+                        // explicit mark, `isDone` is purely "fully paid".
+                        if (isCompleted || isDone)
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
-                              color: AppColors.green,
+                              color: isCompleted
+                                  ? AppColors.green
+                                  : AppColors.greenSoft,
                               borderRadius: BorderRadius.circular(100),
                             ),
-                            child: Text('Completed',
-                                style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.ink,
-                                    fontWeight: FontWeight.w700)),
+                            child: Text(
+                              isCompleted ? 'Completed' : 'Fully paid',
+                              style: AppTextStyles.caption.copyWith(
+                                  color: isCompleted
+                                      ? AppColors.ink
+                                      : context.ink,
+                                  fontWeight: FontWeight.w700),
+                            ),
                           ),
                       ],
                     ),
@@ -220,6 +274,27 @@ class ProjectDetailPage extends ConsumerWidget {
     );
   }
 
+  /// Flips the explicit completion mark. Reversible, so no confirm dialog —
+  /// an Undo action on the snackbar instead. Payments are untouched.
+  Future<void> _toggleCompleted(
+      BuildContext context, WidgetRef ref, ProjectRow project) async {
+    final wasCompleted = project.completedAt != null;
+    final db = ref.read(databaseProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    await db.setProjectCompleted(project.id, completed: !wasCompleted);
+    if (!context.mounted) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(wasCompleted ? 'Project re-opened' : 'Project completed'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () =>
+              db.setProjectCompleted(project.id, completed: wasCompleted),
+        ),
+      ));
+  }
+
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -242,7 +317,7 @@ class ProjectDetailPage extends ConsumerWidget {
       ),
     );
     if (ok != true) return;
-    await ref.read(databaseProvider).deleteProject(project.id);
+    await ref.read(databaseProvider).deleteProject(initialProject.id);
     if (context.mounted) Navigator.of(context).pop();
   }
 }

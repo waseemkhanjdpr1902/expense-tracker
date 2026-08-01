@@ -11,6 +11,10 @@ import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../data/settings_repo.dart';
 import '../../records/ui/add_record_sheet.dart';
+import '../../../core/debounce.dart';
+import '../../../core/search_text.dart';
+import '../../search/data/search_providers.dart';
+import '../../search/ui/searchable_app_bar.dart';
 import '../../records/ui/record_form_page.dart';
 import '../../shared/totals_strip.dart';
 
@@ -22,18 +26,30 @@ class LoansPage extends ConsumerStatefulWidget {
 }
 
 class _LoansPageState extends ConsumerState<LoansPage>
-    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
   late final TabController _tab;
+
+  // ── Scoped search ──────────────────────────────────────────────────────────
+  final _searchController = TextEditingController();
+  final _searchFocus = FocusNode();
+  final _searchDebounce = Debouncer();
+  late final AnimationController _searchAnim = AnimationController(
+    vsync: this,
+    duration: AppMotion.expand,
+    reverseDuration: AppMotion.slow,
+  );
+  String? _query;
+
   LoanTypeFilter _type = LoanTypeFilter.all;
   String? _categoryId;
-  DateRangeFilter _range = DateRangeFilter.month;
+  DateRangeFilter _range = DateRangeFilter.all;
 
   bool get _hasActiveFilters =>
       _type != LoanTypeFilter.all ||
       _categoryId != null ||
-      _range != DateRangeFilter.month;
+      _range != DateRangeFilter.all;
 
   @override
   void initState() {
@@ -44,7 +60,41 @@ class _LoansPageState extends ConsumerState<LoansPage>
   @override
   void dispose() {
     _tab.dispose();
+    _searchController.dispose();
+    _searchFocus.dispose();
+    _searchDebounce.dispose();
+    _searchAnim.dispose();
+    ref.read(searchBackInterceptorProvider.notifier).state = null;
     super.dispose();
+  }
+
+  // ── Scoped search plumbing ─────────────────────────────────────────────────
+
+  void _openSearch() {
+    _searchAnim.forward();
+    ref.read(searchBackInterceptorProvider.notifier).state = _closeSearch;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocus.requestFocus();
+    });
+  }
+
+  void _closeSearch() {
+    _searchFocus.unfocus();
+    _searchAnim.reverse();
+    ref.read(searchBackInterceptorProvider.notifier).state = null;
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _searchDebounce.cancel();
+    setState(() => _query = null);
+    _closeSearch();
+  }
+
+  void _setQuery(String raw) {
+    final next = normalizeQuery(raw);
+    if (next == _query) return;
+    setState(() => _query = next);
   }
 
   void _openFilterSheet() {
@@ -67,7 +117,7 @@ class _LoansPageState extends ConsumerState<LoansPage>
           setState(() {
             _type = LoanTypeFilter.all;
             _categoryId = null;
-            _range = DateRangeFilter.month;
+            _range = DateRangeFilter.all;
           });
         },
       ),
@@ -77,24 +127,58 @@ class _LoansPageState extends ConsumerState<LoansPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // Deep-link from global search. Uses `watch`, not `listen`: the shell's
+    // PageView builds pages lazily, so a page that had never been built yet
+    // would miss the change entirely — `listen` only fires on transitions
+    // observed while already listening. Applying post-frame (setState is
+    // illegal during build) and clearing the provider makes this run once.
+    final pending = ref.watch(pendingSearchProvider);
+    if (pending != null && pending.tab == 2) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _query = pending.query;
+          _searchController.text = pending.query;
+          if (pending.categoryId != null) _categoryId = pending.categoryId;
+        });
+        _searchAnim.value = 1;
+        ref.read(searchBackInterceptorProvider.notifier).state = _closeSearch;
+        ref.read(pendingSearchProvider.notifier).state = null;
+      });
+    }
+
+    // Both tabs carry the query: a name typed while on Outstanding should
+    // still find the settled loan under Returned.
     final outstandingQuery = LoansQuery(
       returned: false,
       type: _type,
       categoryId: _categoryId,
       range: _range,
+      query: _query,
     );
     final returnedQuery = LoansQuery(
       returned: true,
       type: _type,
       categoryId: _categoryId,
       range: _range,
+      query: _query,
     );
     final outstanding = ref.watch(loansProvider(outstandingQuery));
     final returned = ref.watch(loansProvider(returnedQuery));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Loans'),
+      appBar: SearchableAppBar(
+        title: 'Loans',
+        animation: _searchAnim,
+        controller: _searchController,
+        focusNode: _searchFocus,
+        query: _query,
+        onQueryChanged: (raw) =>
+            _searchDebounce(() => mounted ? _setQuery(raw) : null),
+        onSubmitted: (raw) => _searchDebounce.flush(() => _setQuery(raw)),
+        onOpen: _openSearch,
+        onClose: _closeSearch,
+        onClear: _clearSearch,
         actions: [
           IconButton(
             tooltip: 'Filter',
@@ -189,7 +273,8 @@ class _LoansList extends ConsumerWidget {
               children: [
                 SizedBox(
                   height: MediaQuery.of(context).size.height * 0.65,
-                  child: _Empty(isOutstanding: isOutstanding),
+                  child: _Empty(
+                      isOutstanding: isOutstanding, query: query.query),
                 ),
               ],
             );
@@ -432,8 +517,12 @@ class _Badge extends StatelessWidget {
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty({required this.isOutstanding});
+  const _Empty({required this.isOutstanding, this.query});
   final bool isOutstanding;
+
+  /// Active search term, so "nothing here yet" isn't shown when the real
+  /// reason is that nothing matched what was typed.
+  final String? query;
 
   @override
   Widget build(BuildContext context) {
@@ -449,15 +538,22 @@ class _Empty extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-              isOutstanding
-                  ? 'No outstanding loans'
-                  : 'Nothing returned yet',
+              query != null
+                  ? 'No matches for "$query"'
+                  : isOutstanding
+                      ? 'No outstanding loans'
+                      : 'Nothing returned yet',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: AppTextStyles.title.copyWith(color: context.ink)),
           const SizedBox(height: 6),
           Text(
-            isOutstanding
-                ? 'When you lend money, it shows up here.'
-                : 'Loans marked as returned will appear here.',
+            query != null
+                ? 'Try a different name or note.'
+                : isOutstanding
+                    ? 'When you lend money, it shows up here.'
+                    : 'Loans marked as returned will appear here.',
             style:
                 AppTextStyles.caption.copyWith(color: context.inkMuted),
             textAlign: TextAlign.center,
@@ -506,7 +602,7 @@ class _LoansFilterSheetState extends ConsumerState<_LoansFilterSheet> {
       final r = widget.initialRange.resolve(DateTime.now());
       _customStart = r.start;
       _customEnd = r.end;
-      _quickRange = DateRangeFilter.month;
+      _quickRange = DateRangeFilter.all;
     } else {
       _quickRange = widget.initialRange;
     }
@@ -523,7 +619,7 @@ class _LoansFilterSheetState extends ConsumerState<_LoansFilterSheet> {
       _type != LoanTypeFilter.all ||
       _categoryId != null ||
       _isCustom ||
-      _quickRange != DateRangeFilter.month;
+      _quickRange != DateRangeFilter.all;
 
   void _notify() => widget.onChanged(_type, _categoryId, _effectiveRange);
 
@@ -531,7 +627,7 @@ class _LoansFilterSheetState extends ConsumerState<_LoansFilterSheet> {
     setState(() {
       _type = LoanTypeFilter.all;
       _categoryId = null;
-      _quickRange = DateRangeFilter.month;
+      _quickRange = DateRangeFilter.all;
       _isCustom = false;
       _customStart = null;
       _customEnd = null;
@@ -738,6 +834,17 @@ class _LoansFilterSheetState extends ConsumerState<_LoansFilterSheet> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  _Chip(
+                    label: 'All',
+                    selected: !_isCustom && _quickRange == DateRangeFilter.all,
+                    onTap: () {
+                      setState(() {
+                        _isCustom = false;
+                        _quickRange = DateRangeFilter.all;
+                      });
+                      _notify();
+                    },
+                  ),
                   _Chip(
                     label: '1W',
                     selected:

@@ -92,6 +92,12 @@ class Projects extends Table {
   IntColumn get totalAmountMinor => integer()();
   DateTimeColumn get startDate => dateTime()();
   DateTimeColumn get endDate => dateTime().nullable()();
+
+  /// Set when the user **explicitly** marks the project complete; null means
+  /// ongoing. Deliberately not derived from payments — a project can be
+  /// delivered while money is still owed, and fully paid while work continues.
+  DateTimeColumn get completedAt => dateTime().nullable()();
+
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
 
@@ -119,7 +125,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -160,6 +166,12 @@ class AppDatabase extends _$AppDatabase {
               );
             }
           }
+          if (from < 6) {
+            // Explicit project completion. No backfill: completion is a user
+            // decision, so every pre-existing project starts as "Ongoing"
+            // even if it is already fully paid.
+            await m.addColumn(projects, projects.completedAt);
+          }
         },
       );
 
@@ -182,6 +194,24 @@ class AppDatabase extends _$AppDatabase {
   /// debounced auto-backup so edits are saved to Drive without a button press.
   Stream<void> watchAnyChange() => tableUpdates();
 
+  /// Case-insensitive "this column contains this text", with **no pattern
+  /// language at all**.
+  ///
+  /// Deliberately `instr()` rather than `LIKE '%…%'`: LIKE would treat `%` and
+  /// `_` in *user input* as wildcards — the seed data contains "Advance — 30%",
+  /// so searching `30%` would match every row — and drift 2.21's `like()`
+  /// exposes no ESCAPE clause. `instr` has no wildcards, so there is nothing to
+  /// escape and no injection surface.
+  ///
+  /// A NULL column yields NULL, which is false in a WHERE — exactly right for
+  /// the nullable description/counterparty columns.
+  static Expression<bool> _containsCI(
+          Expression<String> column, String needle) =>
+      FunctionCallExpression<int>('instr', [
+        column.lower(),
+        Variable.withString(needle.toLowerCase()),
+      ]).isBiggerThanValue(0);
+
   Stream<List<RecordRow>> watchRecords({
     RecordType? type,
     Set<RecordType>? typesIn,
@@ -190,6 +220,8 @@ class AppDatabase extends _$AppDatabase {
     DateTime? to,
     int? limit,
     String? categoryId,
+    String? query,
+    List<String>? categoryIdsIn,
   }) {
     final q = select(records);
     if (type != null) q.where((r) => r.type.equalsValue(type));
@@ -207,6 +239,18 @@ class AppDatabase extends _$AppDatabase {
     }
     if (categoryId != null) {
       q.where((r) => r.categoryId.equals(categoryId));
+    }
+    // Free-text search: ORed across the searchable text columns, then ANDed
+    // with every filter above. `type` is a TEXT enum column and is deliberately
+    // never searched. Category *names* live in another table and cannot be
+    // joined here, so callers resolve matching ids and pass [categoryIdsIn].
+    if (query != null && query.isNotEmpty) {
+      q.where((r) => Expression.or([
+            _containsCI(r.description, query),
+            _containsCI(r.counterparty, query),
+            if (categoryIdsIn != null && categoryIdsIn.isNotEmpty)
+              r.categoryId.isIn(categoryIdsIn),
+          ]));
     }
     q.orderBy([
       (r) => OrderingTerm.desc(r.occurredAt),
@@ -349,8 +393,22 @@ class AppDatabase extends _$AppDatabase {
             ..orderBy([(p) => OrderingTerm.desc(p.createdAt)]))
           .watch();
 
+  /// A single project as a live stream — lets the detail page stay in sync with
+  /// edits and completion changes instead of holding a stale row snapshot.
+  Stream<ProjectRow?> watchProject(String id) =>
+      (select(projects)..where((p) => p.id.equals(id))).watchSingleOrNull();
+
   Future<void> upsertProject(ProjectsCompanion data) =>
       into(projects).insertOnConflictUpdate(data);
+
+  /// Explicitly mark a project complete (or re-open it). Payments are left
+  /// completely alone — completion is a workflow flag, not a money operation.
+  Future<void> setProjectCompleted(String id, {required bool completed}) =>
+      (update(projects)..where((p) => p.id.equals(id))).write(
+        ProjectsCompanion(
+          completedAt: Value(completed ? DateTime.now() : null),
+        ),
+      );
 
   Future<void> deleteProject(String id) async {
     await transaction(() async {

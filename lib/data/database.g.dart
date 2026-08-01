@@ -912,6 +912,12 @@ class $ProjectsTable extends Projects
   late final GeneratedColumn<DateTime> endDate = GeneratedColumn<DateTime>(
       'end_date', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _completedAtMeta =
+      const VerificationMeta('completedAt');
+  @override
+  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
+      'completed_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -929,6 +935,7 @@ class $ProjectsTable extends Projects
         totalAmountMinor,
         startDate,
         endDate,
+        completedAt,
         createdAt
       ];
   @override
@@ -980,6 +987,12 @@ class $ProjectsTable extends Projects
       context.handle(_endDateMeta,
           endDate.isAcceptableOrUnknown(data['end_date']!, _endDateMeta));
     }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+          _completedAtMeta,
+          completedAt.isAcceptableOrUnknown(
+              data['completed_at']!, _completedAtMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -1007,6 +1020,8 @@ class $ProjectsTable extends Projects
           .read(DriftSqlType.dateTime, data['${effectivePrefix}start_date'])!,
       endDate: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}end_date']),
+      completedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}completed_at']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
     );
@@ -1026,6 +1041,11 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
   final int totalAmountMinor;
   final DateTime startDate;
   final DateTime? endDate;
+
+  /// Set when the user **explicitly** marks the project complete; null means
+  /// ongoing. Deliberately not derived from payments — a project can be
+  /// delivered while money is still owed, and fully paid while work continues.
+  final DateTime? completedAt;
   final DateTime createdAt;
   const ProjectRow(
       {required this.id,
@@ -1035,6 +1055,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
       required this.totalAmountMinor,
       required this.startDate,
       this.endDate,
+      this.completedAt,
       required this.createdAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1051,6 +1072,9 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
     map['start_date'] = Variable<DateTime>(startDate);
     if (!nullToAbsent || endDate != null) {
       map['end_date'] = Variable<DateTime>(endDate);
+    }
+    if (!nullToAbsent || completedAt != null) {
+      map['completed_at'] = Variable<DateTime>(completedAt);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -1071,6 +1095,9 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
       endDate: endDate == null && nullToAbsent
           ? const Value.absent()
           : Value(endDate),
+      completedAt: completedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedAt),
       createdAt: Value(createdAt),
     );
   }
@@ -1086,6 +1113,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
       totalAmountMinor: serializer.fromJson<int>(json['totalAmountMinor']),
       startDate: serializer.fromJson<DateTime>(json['startDate']),
       endDate: serializer.fromJson<DateTime?>(json['endDate']),
+      completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1100,6 +1128,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
       'totalAmountMinor': serializer.toJson<int>(totalAmountMinor),
       'startDate': serializer.toJson<DateTime>(startDate),
       'endDate': serializer.toJson<DateTime?>(endDate),
+      'completedAt': serializer.toJson<DateTime?>(completedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1112,6 +1141,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
           int? totalAmountMinor,
           DateTime? startDate,
           Value<DateTime?> endDate = const Value.absent(),
+          Value<DateTime?> completedAt = const Value.absent(),
           DateTime? createdAt}) =>
       ProjectRow(
         id: id ?? this.id,
@@ -1121,6 +1151,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
         totalAmountMinor: totalAmountMinor ?? this.totalAmountMinor,
         startDate: startDate ?? this.startDate,
         endDate: endDate.present ? endDate.value : this.endDate,
+        completedAt: completedAt.present ? completedAt.value : this.completedAt,
         createdAt: createdAt ?? this.createdAt,
       );
   ProjectRow copyWithCompanion(ProjectsCompanion data) {
@@ -1136,6 +1167,8 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
           : this.totalAmountMinor,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       endDate: data.endDate.present ? data.endDate.value : this.endDate,
+      completedAt:
+          data.completedAt.present ? data.completedAt.value : this.completedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1150,6 +1183,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
           ..write('totalAmountMinor: $totalAmountMinor, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
+          ..write('completedAt: $completedAt, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1157,7 +1191,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
 
   @override
   int get hashCode => Object.hash(id, name, description, categoryId,
-      totalAmountMinor, startDate, endDate, createdAt);
+      totalAmountMinor, startDate, endDate, completedAt, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1169,6 +1203,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
           other.totalAmountMinor == this.totalAmountMinor &&
           other.startDate == this.startDate &&
           other.endDate == this.endDate &&
+          other.completedAt == this.completedAt &&
           other.createdAt == this.createdAt);
 }
 
@@ -1180,6 +1215,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
   final Value<int> totalAmountMinor;
   final Value<DateTime> startDate;
   final Value<DateTime?> endDate;
+  final Value<DateTime?> completedAt;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const ProjectsCompanion({
@@ -1190,6 +1226,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
     this.totalAmountMinor = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
+    this.completedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1201,6 +1238,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
     required int totalAmountMinor,
     required DateTime startDate,
     this.endDate = const Value.absent(),
+    this.completedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : name = Value(name),
@@ -1214,6 +1252,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
     Expression<int>? totalAmountMinor,
     Expression<DateTime>? startDate,
     Expression<DateTime>? endDate,
+    Expression<DateTime>? completedAt,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -1225,6 +1264,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
       if (totalAmountMinor != null) 'total_amount_minor': totalAmountMinor,
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
+      if (completedAt != null) 'completed_at': completedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1238,6 +1278,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
       Value<int>? totalAmountMinor,
       Value<DateTime>? startDate,
       Value<DateTime?>? endDate,
+      Value<DateTime?>? completedAt,
       Value<DateTime>? createdAt,
       Value<int>? rowid}) {
     return ProjectsCompanion(
@@ -1248,6 +1289,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
       totalAmountMinor: totalAmountMinor ?? this.totalAmountMinor,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
+      completedAt: completedAt ?? this.completedAt,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1277,6 +1319,9 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
     if (endDate.present) {
       map['end_date'] = Variable<DateTime>(endDate.value);
     }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1296,6 +1341,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
           ..write('totalAmountMinor: $totalAmountMinor, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
+          ..write('completedAt: $completedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2085,6 +2131,7 @@ typedef $$ProjectsTableCreateCompanionBuilder = ProjectsCompanion Function({
   required int totalAmountMinor,
   required DateTime startDate,
   Value<DateTime?> endDate,
+  Value<DateTime?> completedAt,
   Value<DateTime> createdAt,
   Value<int> rowid,
 });
@@ -2096,6 +2143,7 @@ typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
   Value<int> totalAmountMinor,
   Value<DateTime> startDate,
   Value<DateTime?> endDate,
+  Value<DateTime?> completedAt,
   Value<DateTime> createdAt,
   Value<int> rowid,
 });
@@ -2130,6 +2178,9 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<DateTime> get endDate => $composableBuilder(
       column: $table.endDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get completedAt => $composableBuilder(
+      column: $table.completedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -2166,6 +2217,9 @@ class $$ProjectsTableOrderingComposer
   ColumnOrderings<DateTime> get endDate => $composableBuilder(
       column: $table.endDate, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
+      column: $table.completedAt, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 }
@@ -2199,6 +2253,9 @@ class $$ProjectsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get endDate =>
       $composableBuilder(column: $table.endDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
+      column: $table.completedAt, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2234,6 +2291,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<int> totalAmountMinor = const Value.absent(),
             Value<DateTime> startDate = const Value.absent(),
             Value<DateTime?> endDate = const Value.absent(),
+            Value<DateTime?> completedAt = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -2245,6 +2303,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             totalAmountMinor: totalAmountMinor,
             startDate: startDate,
             endDate: endDate,
+            completedAt: completedAt,
             createdAt: createdAt,
             rowid: rowid,
           ),
@@ -2256,6 +2315,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             required int totalAmountMinor,
             required DateTime startDate,
             Value<DateTime?> endDate = const Value.absent(),
+            Value<DateTime?> completedAt = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -2267,6 +2327,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             totalAmountMinor: totalAmountMinor,
             startDate: startDate,
             endDate: endDate,
+            completedAt: completedAt,
             createdAt: createdAt,
             rowid: rowid,
           ),

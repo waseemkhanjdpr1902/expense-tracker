@@ -7,8 +7,17 @@ class AppMotion {
   static const Duration fast = Duration(milliseconds: 160);
   static const Duration med = Duration(milliseconds: 220);
   static const Duration slow = Duration(milliseconds: 320);
+
+  /// A surface growing out of its source (the search reveal). Longer than
+  /// [slow] because it covers real distance; exits use [slow] so leaving feels
+  /// quicker than arriving.
+  static const Duration expand = Duration(milliseconds: 420);
+
   static const Curve enter = Curves.easeOutCubic;
   static const Curve exit = Curves.easeIn;
+
+  /// Reverse curve for [expand] — decelerating out mirrors easing in.
+  static const Curve expandReverse = Curves.easeInCubic;
 }
 
 /// Fade + slight upward slide on first build. Cheap, no controller.

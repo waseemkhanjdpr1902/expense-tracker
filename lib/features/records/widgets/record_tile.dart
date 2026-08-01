@@ -6,12 +6,22 @@ import '../../../core/formatters.dart';
 import '../../../core/theme.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
+import '../../search/ui/widgets/highlight.dart';
 import '../ui/record_form_page.dart';
 
 class RecordTile extends ConsumerWidget {
-  const RecordTile({super.key, required this.record, required this.currency});
+  const RecordTile({
+    super.key,
+    required this.record,
+    required this.currency,
+    this.highlight,
+  });
   final RecordRow record;
   final CurrencyOption currency;
+
+  /// When set, occurrences of this query are emphasised in the title and
+  /// subline. Optional so every existing call site is unaffected.
+  final String? highlight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -90,18 +100,29 @@ class RecordTile extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: AppTextStyles.body.copyWith(
-                          color: context.ink,
-                          fontWeight: FontWeight.w600),
+                  Builder(builder: (context) {
+                    final titleStyle = AppTextStyles.body.copyWith(
+                        color: context.ink, fontWeight: FontWeight.w600);
+                    return Text.rich(
+                      highlightSpan(title, highlight,
+                          base: titleStyle,
+                          match: highlightStyle(context, titleStyle)),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  }),
                   const SizedBox(height: 3),
-                  Text(subline,
-                      style: AppTextStyles.caption
-                          .copyWith(color: context.inkMuted),
+                  Builder(builder: (context) {
+                    final subStyle = AppTextStyles.caption
+                        .copyWith(color: context.inkMuted);
+                    return Text.rich(
+                      highlightSpan(subline, highlight,
+                          base: subStyle,
+                          match: highlightStyle(context, subStyle)),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  }),
                 ],
               ),
             ),

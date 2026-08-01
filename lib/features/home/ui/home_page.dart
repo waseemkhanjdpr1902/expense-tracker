@@ -14,6 +14,9 @@ import '../../../data/settings_repo.dart';
 import '../../../shell/home_shell.dart';
 import '../../backup/ui/widgets/profile_chip.dart';
 import '../../mascot/mascot_companion.dart';
+import '../../search/ui/global_search_page.dart';
+import '../../search/ui/search_expand.dart';
+import '../../search/ui/search_icon_button.dart';
 import '../../records/ui/record_form_page.dart';
 import '../../records/widgets/record_tile.dart';
 import '../../shared/section_header.dart';
@@ -70,6 +73,16 @@ class HomePage extends ConsumerWidget {
                     ],
                   ),
                 ),
+                SearchIconButton(
+                  chip: true,
+                  onTap: (origin) => Navigator.of(context).push(
+                    SearchExpandRoute<void>(
+                      origin: origin,
+                      builder: (_) => const GlobalSearchPage(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
                 const ProfileChip(),
               ],
             ),

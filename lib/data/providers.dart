@@ -58,11 +58,18 @@ class RecordsQuery {
   final DateRangeFilter range;
   final String? categoryId;
   final int limit;
+
+  /// Normalised free-text search, or null. MUST appear in == and hashCode:
+  /// equal keys serve the cached stream, so omitting it makes typing silently
+  /// do nothing.
+  final String? query;
+
   const RecordsQuery({
     required this.type,
     required this.range,
     this.categoryId,
     this.limit = 50,
+    this.query,
   });
 
   @override
@@ -71,20 +78,25 @@ class RecordsQuery {
       other.type == type &&
       other.range == range &&
       other.categoryId == categoryId &&
-      other.limit == limit;
+      other.limit == limit &&
+      other.query == query;
 
   @override
-  int get hashCode => Object.hash(type, range, categoryId, limit);
+  int get hashCode => Object.hash(type, range, categoryId, limit, query);
 }
 
-final filteredRecordsProvider =
-    StreamProvider.family<List<RecordRow>, RecordsQuery>((ref, q) {
-  final r = q.range.resolve(DateTime.now());
+// autoDispose: the `query` field makes this family's key space unbounded, so
+// without it every search term ever typed would retain a live stream.
+final filteredRecordsProvider = StreamProvider.autoDispose
+    .family<List<RecordRow>, RecordsQuery>((ref, q) {
+  final r = q.range.resolveOrNull(DateTime.now());
   return ref.watch(databaseProvider).watchRecords(
         typesIn: q.type.types,
-        from: r.start,
-        to: r.end,
+        from: r?.start,
+        to: r?.end,
         categoryId: q.categoryId,
+        query: q.query,
+        categoryIdsIn: matchingCategoryIds(ref, q.query),
         limit: q.limit,
       );
 });
@@ -108,11 +120,15 @@ class LoansQuery {
   final LoanTypeFilter type;
   final String? categoryId;
   final DateRangeFilter range;
+  /// Normalised free-text search, or null. Must stay in == / hashCode.
+  final String? query;
+
   const LoansQuery({
     required this.returned,
     required this.type,
     required this.range,
     this.categoryId,
+    this.query,
   });
 
   @override
@@ -121,21 +137,25 @@ class LoansQuery {
       other.returned == returned &&
       other.type == type &&
       other.categoryId == categoryId &&
-      other.range == range;
+      other.range == range &&
+      other.query == query;
 
   @override
-  int get hashCode => Object.hash(returned, type, categoryId, range);
+  int get hashCode =>
+      Object.hash(returned, type, categoryId, range, query);
 }
 
-final loansProvider =
-    StreamProvider.family<List<RecordRow>, LoansQuery>((ref, q) {
-  final r = q.range.resolve(DateTime.now());
+final loansProvider = StreamProvider.autoDispose
+    .family<List<RecordRow>, LoansQuery>((ref, q) {
+  final r = q.range.resolveOrNull(DateTime.now());
   return ref.watch(databaseProvider).watchRecords(
         typesIn: q.type.types,
         loanReturned: q.returned,
         categoryId: q.categoryId,
-        from: r.start,
-        to: r.end,
+        from: r?.start,
+        to: r?.end,
+        query: q.query,
+        categoryIdsIn: matchingCategoryIds(ref, q.query),
       );
 });
 
@@ -147,8 +167,31 @@ final earliestRecordYearProvider = FutureProvider<int>((ref) async {
 final categoriesProvider = StreamProvider<List<CategoryRow>>((ref) =>
     ref.watch(databaseProvider).watchCategories());
 
+/// Ids of categories whose *name* contains [query], resolved in Dart because
+/// records store only a category id and the codebase has no SQL joins. Folded
+/// into the record WHERE so searching "groceries" finds rows categorised
+/// Groceries even when no description mentions the word.
+List<String> matchingCategoryIds(Ref ref, String? query) {
+  if (query == null || query.isEmpty) return const [];
+  final needle = query.toLowerCase();
+  final cats = ref.watch(categoriesProvider).valueOrNull ?? const [];
+  return [
+    for (final c in cats)
+      if (c.name.toLowerCase().contains(needle)) c.id,
+  ];
+}
+
+/// Status filter for the Projects screen. Completion is an **explicit** user
+/// mark (`Projects.completedAt`), never derived from payments.
+enum ProjectStatusFilter { all, ongoing, completed }
+
 final projectsProvider = StreamProvider<List<ProjectRow>>(
     (ref) => ref.watch(databaseProvider).watchProjects());
+
+/// A single project, live. The detail page watches this so a completion toggle
+/// or an edit refreshes in place instead of showing a stale snapshot.
+final projectByIdProvider = StreamProvider.family<ProjectRow?, String>(
+    (ref, id) => ref.watch(databaseProvider).watchProject(id));
 
 final projectPaymentsProvider =
     StreamProvider.family<List<ProjectPaymentRow>, String>(
@@ -194,30 +237,39 @@ class RecordsTotalsQuery {
   final RecordsFilter type;
   final DateRangeFilter range;
   final String? categoryId;
+  /// Normalised free-text search, or null. Must stay in == / hashCode.
+  final String? query;
+
   const RecordsTotalsQuery(
-      {required this.type, required this.range, this.categoryId});
+      {required this.type,
+      required this.range,
+      this.categoryId,
+      this.query});
 
   @override
   bool operator ==(Object other) =>
       other is RecordsTotalsQuery &&
       other.type == type &&
       other.range == range &&
-      other.categoryId == categoryId;
+      other.categoryId == categoryId &&
+      other.query == query;
 
   @override
-  int get hashCode => Object.hash(type, range, categoryId);
+  int get hashCode => Object.hash(type, range, categoryId, query);
 }
 
-final filteredTotalsProvider =
-    StreamProvider.family<RecordsTotals, RecordsTotalsQuery>((ref, q) {
-  final r = q.range.resolve(DateTime.now());
+final filteredTotalsProvider = StreamProvider.autoDispose
+    .family<RecordsTotals, RecordsTotalsQuery>((ref, q) {
+  final r = q.range.resolveOrNull(DateTime.now());
   return ref
       .watch(databaseProvider)
       .watchRecords(
         typesIn: q.type.types,
-        from: r.start,
-        to: r.end,
+        from: r?.start,
+        to: r?.end,
         categoryId: q.categoryId,
+        query: q.query,
+        categoryIdsIn: matchingCategoryIds(ref, q.query),
         // no limit — we need totals across all matching records
       )
       .map((rows) {

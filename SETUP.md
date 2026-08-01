@@ -10,6 +10,16 @@ dart run build_runner build --delete-conflicting-outputs   # only if drift schem
 flutter run                                                # plug in an Android device
 ```
 
+Requires the Flutter SDK with Dart `^3.11.5`. Android is the only maintained
+platform — the other platform folders are stock `flutter create` scaffolding.
+
+Sanity checks before you commit:
+
+```bash
+flutter analyze
+flutter test
+```
+
 ## 2. (Optional) Enable Google Drive backup
 
 Backups land in a **hidden app-data folder** on the signed-in user's Drive — invisible in their Drive UI, scoped to this app only. To make sign-in work on your device, you need an OAuth 2.0 client ID in Google Cloud Console.
@@ -45,7 +55,7 @@ No `google-services.json` is needed — that's for Firebase. `google_sign_in` 6.
 ### c) Try it out
 
 1. `flutter run` → Settings → **Backup** → **Connect Google**
-2. Sign in with the test-user account you added in step (b).3
+2. Sign in with the test-user account you added in step (b).
 3. Tap **Back up now** → "Backup uploaded ✓".
 4. To see your backup file metadata, visit <https://myaccount.google.com/permissions> — this app should appear with "View and manage its own configuration data in your Google Drive". (You won't see the file in the normal Drive UI; that's by design.)
 
@@ -121,7 +131,7 @@ Wait ~5 minutes after saving for propagation.
 ```bash
 flutter clean && flutter pub get
 flutter build apk --release --split-per-abi \
-  --obfuscate --split-debug-info=build/symbols/v1.0.1
+  --obfuscate --split-debug-info=build/symbols/v1.0.2   # match pubspec `version:`
 ```
 
 Outputs three APKs in `build/app/outputs/flutter-apk/`. Ship `app-arm64-v8a-release.apk` to ~95 % of users.
