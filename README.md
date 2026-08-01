@@ -148,7 +148,7 @@ For Google Drive backup and release-signing setup, see [SETUP.md](SETUP.md).
 
 ## Changelog
 
-### Unreleased
+### [v1.0.3](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.3)
 - **A dark theme that's comfortable to use.** The old one paired near-black with pure white — measured 19.7:1, beyond even the AAA accessibility ceiling, which is what makes a dark screen tiring after a few minutes. Rebuilt on Apple's elevation ramp, with the accent desaturating in dark mode. Fixes three real bugs on the way: unreadable text on soft-green panels, a danger red that already failed contrast, and a mascot bright enough to glow
 - **Navigation that feels like iOS** — consistent slide transitions, predictive back, and a record's icon flying into its detail page
 - **Iconography** — one icon family throughout, and categories now derive their own glyph from their name

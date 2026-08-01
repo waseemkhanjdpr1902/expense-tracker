@@ -1,7 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/chart_data.dart';
 import '../../../core/currency.dart';
@@ -439,21 +438,19 @@ class _MiniStat extends StatelessWidget {
 }
 
 class _BalanceDecorPainter extends CustomPainter {
-  /// Both injected rather than read from context — a painter has no
+  /// The accent is injected rather than read from context — a painter has no
   /// BuildContext, and this keeps it theme-agnostic (same approach as
-  /// PixelCat). [intensity] scales every alpha, so the decoration reads
-  /// equally on the light-mode black card and the dark-mode raised card.
-  const _BalanceDecorPainter({required this.accent, this.intensity = 1.0});
+  /// PixelCat).
+  const _BalanceDecorPainter({required this.accent});
 
   final Color accent;
-  final double intensity;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final base = 0.35 * intensity;
-    final bright = 0.70 * intensity;
-    final scanAlpha = 0.08 * intensity;
-    final arcAlpha = 0.15 * intensity;
+    const base = 0.35;
+    const bright = 0.70;
+    const scanAlpha = 0.08;
+    const arcAlpha = 0.15;
 
     final stroke = Paint()
       ..color = accent.withValues(alpha: base)
@@ -488,7 +485,7 @@ class _BalanceDecorPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BalanceDecorPainter old) =>
-      old.accent != accent || old.intensity != intensity;
+      old.accent != accent;
 }
 
 class _BalanceCardSkeleton extends StatelessWidget {
