@@ -48,3 +48,6 @@ app.*.map.json
 android/key.properties
 *.jks
 *.keystore
+
+# Claude Code local permissions (personal, not shared)
+.claude/settings.local.json

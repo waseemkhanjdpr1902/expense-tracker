@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/currency.dart';
 import '../../../core/motion.dart';
 import '../../../core/theme.dart';
+import '../../../data/dev_seed.dart';
 import '../../../data/onboarding_repo.dart';
 import '../../../data/providers.dart';
 import '../../../data/settings_repo.dart';
@@ -84,6 +86,20 @@ class SettingsPage extends ConsumerWidget {
             ]),
             const SizedBox(height: 16),
             _Section(title: 'Developer', children: [
+              if (kDebugMode)
+                _Tile(
+                  icon: Icons.science_outlined,
+                  title: 'Load demo data',
+                  subtitle: '~6 months of sample records, loans and projects',
+                  onTap: () => _loadDemoData(context, ref),
+                ),
+              if (kDebugMode)
+                _Tile(
+                  icon: Icons.delete_sweep_outlined,
+                  title: 'Clear all data',
+                  subtitle: 'Wipe every record, loan, project and category',
+                  onTap: () => _clearAllData(context, ref),
+                ),
               _Tile(
                 icon: Icons.refresh,
                 title: 'Reset onboarding',
@@ -104,6 +120,87 @@ class SettingsPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Debug-only. Replaces everything in the database with the demo set from
+/// [DevSeed] so there is realistic data to build and test against.
+Future<void> _loadDemoData(BuildContext context, WidgetRef ref) async {
+  final ok = await _confirm(
+    context,
+    title: 'Load demo data?',
+    body: 'This replaces all existing records, loans, projects and categories '
+        'with ~6 months of sample data.',
+    action: 'Load',
+  );
+  if (!ok || !context.mounted) return;
+
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.showSnackBar(
+    const SnackBar(content: Text('Seeding demo data…')),
+  );
+  try {
+    final summary = await DevSeed.load(ref.read(databaseProvider));
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text('Demo data loaded — $summary')));
+  } catch (e) {
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text('Seeding failed: $e')));
+  }
+}
+
+/// Debug-only. Empties every table.
+Future<void> _clearAllData(BuildContext context, WidgetRef ref) async {
+  final ok = await _confirm(
+    context,
+    title: 'Clear all data?',
+    body: 'Every record, loan, project and category will be deleted. '
+        'This cannot be undone.',
+    action: 'Clear',
+    destructive: true,
+  );
+  if (!ok || !context.mounted) return;
+
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await DevSeed.clear(ref.read(databaseProvider));
+    messenger.showSnackBar(const SnackBar(content: Text('All data cleared')));
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text('Clear failed: $e')));
+  }
+}
+
+Future<bool> _confirm(
+  BuildContext context, {
+  required String title,
+  required String body,
+  required String action,
+  bool destructive = false,
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(title),
+      content: Text(body),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text(
+            action,
+            style: destructive
+                ? const TextStyle(color: AppColors.danger)
+                : null,
+          ),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
 }
 
 String _themeLabel(ThemeMode m) {

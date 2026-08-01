@@ -1,0 +1,12 @@
+targets:
+  $default:
+    builders:
+      # Riverpod codegen is unused in this project — there is not a single
+      # `@riverpod` annotation in lib/; the only generated file is drift's
+      # database.g.dart. The generator also bundles an older analyzer that
+      # cannot parse null-aware elements (`?trailing`,
+      # lib/features/shared/section_header.dart:22), which fails the whole
+      # build_runner run. Disabled so `dart run build_runner build` only does
+      # the drift work it is actually needed for.
+      riverpod_generator:riverpod_generator:
+        enabled: false
