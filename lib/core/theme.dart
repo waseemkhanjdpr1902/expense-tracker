@@ -53,27 +53,52 @@ class AppBrand {
 
 class DarkTuning {
   /// The one line. Everything else is computed relative to it.
-  /// `#1C1C1E` is iOS `secondarySystemBackground` — Apple's elevated base.
-  static const Color base = Color(0xFF1C1C1E);
+  ///
+  /// **Why this isn't a grey.** `#090C12` is a near-black carrying a deliberate
+  /// cool cast — channels run 9 / 12 / 18 rather than flat. That 9-point spread
+  /// is the entire difference between an interface that reads "premium" and one
+  /// that reads "grey": Linear, Vercel and Raycast all tint their neutrals
+  /// toward a single cool anchor instead of using true greys. The previous base
+  /// (`#1C1C1E`, iOS `secondarySystemBackground`) is almost hue-less, which is
+  /// exactly what flat grey looks like.
+  ///
+  /// **Why near-black is safe here when it wasn't before.** The original glare
+  /// problem was `#0B0B0C` under *pure white* — 19.67:1. Depth is what makes a
+  /// near-black canvas comfortable: content sits on lifted surfaces, never on
+  /// the canvas itself, and [labelBase] is dimmed to hold the pair at ~14:1.
+  /// Going darker and going gentler are not in conflict; the earlier theme was
+  /// simply doing both wrong at once.
+  static const Color base = Color(0xFF090C12);
 
   /// Elevation ramp: how far each level is lerped toward white.
-  /// These stops reproduce Apple's #2C2C2E / #3A3A3C / #48484A exactly.
-  static const List<double> ramp = [0.0, 0.0705, 0.132, 0.194];
+  ///
+  /// Lerping preserves the channel spread scaled by `(1 - t)`, so the cool cast
+  /// survives all the way up the ramp instead of washing out to grey. Stops
+  /// yield `#13161C` / `#1D2025` / `#292C31` — each step ~5-8% lighter, which
+  /// is the separation the eye needs to read one surface as above another.
+  static const List<double> ramp = [0.0, 0.04, 0.082, 0.13];
 
-  /// The "white". NOT pure #FFFFFF — that against [base] is 19.7:1, which is
-  /// what makes a dark theme hurt to look at for any length of time.
-  static const Color labelBase = Color(0xFFEBEBF5);
+  /// The "white". NOT pure `#FFFFFF` — that against a near-black base is ~19:1,
+  /// which is what makes a dark theme hurt to look at for any length of time.
+  /// Cooled to match the surfaces; a warm white over cool surfaces is the other
+  /// classic way a dark theme ends up looking cheap.
+  static const Color labelBase = Color(0xFFDDE1E8);
   static const double lSecondary = 0.60;
   static const double lTertiary = 0.30;
   static const double lQuaternary = 0.18;
 
   /// Placeholder/hint text. Deliberately above Apple's tertiary (0.30): this
-  /// app routes real hint text through it, and 0.30 would be 2.48:1.
-  static const double lPlaceholder = 0.45;
+  /// app routes real hint text through it, and 0.30 would be far below AA.
+  /// 0.48 rather than 0.45 because the canvas moved darker and the label
+  /// dimmer — the pair has to clear the old 3.80:1 floor, and 0.45 lands at
+  /// 3.73:1. `palette_contrast_test.dart` is what caught that.
+  static const double lPlaceholder = 0.48;
 
-  static const Color separatorBase = Color(0xFF545458);
+  /// Separators carry the same cool cast; a neutral grey hairline over tinted
+  /// surfaces reads as a foreign element.
+  static const Color separatorBase = Color(0xFF4A4F5A);
   static const double separatorAlpha = 0.60;
-  static const Color opaqueSeparator = Color(0xFF38383A);
+  static const Color opaqueSeparator = Color(0xFF262A31);
 
   /// Accent adaptation. A fully saturated lime on a dark ground glares;
   /// iOS desaturates system colours in dark mode for the same reason.
@@ -81,12 +106,23 @@ class DarkTuning {
   static const double accentLightDelta = -0.05;
 
   /// Strength of the soft accent wash, blended opaque (see [AppPalette]).
-  static const double accentSoftMix = 0.11;
+  ///
+  /// Lowered from 0.11 when the canvas went near-black. A yellow-green at 11%
+  /// over a light-ish grey is a mint tint; the same 11% over `#13161B` is
+  /// **olive** — the hue survives while the lightness collapses, and a panel
+  /// that size reads as swamp. At 0.07 it comes back to a faint green cast on
+  /// a dark surface, which is what "soft" was supposed to mean.
+  static const double accentSoftMix = 0.07;
 
   /// The mascot is a large SOLID shape. At full label brightness it becomes the
   /// single brightest area on the screen, which reads as a glowing blob rather
   /// than a character. Text can be bright because it is thin; fills cannot.
-  static const double mascotAlpha = 0.62;
+  ///
+  /// Raised from 0.62 alongside the darker canvas: 0.62 was tuned against
+  /// `#1C1C1E`, and against `#13161B` the same value lands as a flat mid-grey
+  /// that reads washed-out rather than dimmed. This keeps the *rendered* body
+  /// roughly where it was.
+  static const double mascotAlpha = 0.72;
 
   /// Danger as *content* (red text/icons) needs lifting to stay legible on a
   /// dark ground; danger as a *fill* stays at brand strength.
