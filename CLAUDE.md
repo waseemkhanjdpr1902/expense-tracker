@@ -13,7 +13,7 @@ account and no network; Google Sign-In exists *only* for backup.
   baked into the Android `applicationId` `com.example.xpense_traker`, which is
   the install identity of every shipped release and the package name registered
   on the OAuth clients. **Do not rename it.**)
-- Version lives in `pubspec.yaml` (`version: 1.0.3+4`). The UI never hardcodes
+- Version lives in `pubspec.yaml` (`version: 1.0.4+5`). The UI never hardcodes
   it — `appVersionProvider` reads it via `package_info_plus` at runtime.
 - **Signing identity changed at v1.0.3.** The original release keystore was lost
   in a laptop migration, so v1.0.3 onward is signed with a new key and cannot
@@ -252,6 +252,41 @@ reads return in single-digit ms, so a spinner is a flash, not information.
 **Haptics — `lib/core/haptics.dart`.** `selection/light/success/warning`, named
 by meaning. At most one per user intent; never on scroll, swipe frames or in
 `build()`.
+
+**Glass — `lib/core/glass.dart`.** Translucent chrome, retuned from
+`GlassTuning` alone. Three rules, none of them stylistic:
+
+- **Navigation layer only.** App bars, the nav bar, sheets. Apple: *"Don't use
+  Liquid Glass in the content layer… can result in a confusing visual
+  hierarchy."* A record row, a balance, a totals strip or any card holding a
+  number is content. The hero card looks like a candidate and isn't — it's a
+  list child that scrolls with content, so there is nothing behind it to
+  refract and "glass" there would be a painted-on gradient.
+- **Regular, never clear.** The see-through look is Apple's *clear* variant,
+  prescribed *"only"* for surfaces over photo and video. Everything here is
+  text-heavy, which is what regular exists for.
+- **The fill must stay opaque enough to bound its own contrast.** This is the
+  whole reason `glassExtremes()` exists: a free-floating translucent surface
+  inherits its background, so its contrast becomes a function of scroll
+  position and cannot be asserted — the failure that produced 2.11:1 text
+  here once, and ~1.5:1 in shipped iOS 26. `glass_contrast_test.dart` asserts
+  every foreground against the fill composited over **both** black and white,
+  and fails if the fill gets transparent enough for the backdrop to dominate.
+
+Implementation notes worth keeping: blur and saturation are **one composed
+`ImageFilter`** (nesting two `BackdropFilter`s buys a second full-screen
+save-layer and nothing else); saturation is restored ~18% because blur averages
+colour toward grey; the rim inverts between themes (white bright-at-top in
+dark; black strongest-at-bottom in light, where a white rim on a near-white
+fill is invisible); and `rim: false` wherever a surface's edges run off-screen.
+
+A glass app bar needs `extendBodyBehindAppBar: true` **and** the top inset
+moved out of `SafeArea` into the scroll view's padding — with `SafeArea(top:
+true)` rows stop below the bar instead of passing under it, and glass with
+nothing behind it is an expensive flat fill.
+
+`reduceTransparencyProvider` (Settings → Appearance) and the OS high-contrast /
+accessible-navigation flags both force the opaque path.
 
 ## Conventions
 

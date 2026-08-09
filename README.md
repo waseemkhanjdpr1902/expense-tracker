@@ -28,13 +28,13 @@ covers emulators.
 
 Enable **Install from unknown sources**, then open the file.
 
-> [!WARNING]
-> **Upgrading from v1.0.2 or earlier requires an uninstall.** v1.0.3 is signed with a new release
-> key, so Android will refuse to install it over the old version — and uninstalling deletes the
-> local database, which is the only copy your records have.
+> [!NOTE]
+> **Coming from v1.0.3?** It installs straight over the top — nothing to uninstall, nothing to back
+> up first.
 >
-> Back up first: in the old version, **Settings → Backup → Back up now**. Then uninstall, install
-> v1.0.3, sign in and restore. Fresh installs are unaffected.
+> **Coming from v1.0.2 or earlier?** v1.0.3 changed the signing key, so Android will refuse to
+> install over it. Back up first (**Settings → Backup → Back up now**), then uninstall, install, and
+> restore.
 
 ## Features
 
@@ -62,9 +62,11 @@ description.
 the Drive UI. It carries your settings as well as your data, refuses to overwrite a newer copy made
 on another device, and restores in place without an app restart.
 
-**Design** — Material 3 in light and dark, with the dark theme built on Apple's elevation ramp
-rather than pure white on near-black. iOS-style navigation, haptics, and category glyphs derived
-from category names.
+**Design** — Material 3 in light and dark, with the dark theme built on a cool-tinted near-black
+rather than flat grey. App bars, the nav bar and sheets are **glass**: your content blurs through
+them as it scrolls past. Deliberately limited to navigation — nothing you need to read ever sits on
+a translucent surface, and a **Reduce transparency** switch makes it all solid. Plus iOS-style
+navigation, haptics, and category glyphs derived from category names.
 
 **Xpy** — a code-drawn pixel cat on the home screen whose mood follows your month's net.
 
@@ -84,8 +86,8 @@ lib/
   main.dart      # loads persisted settings before the first frame
   app.dart       # MaterialApp + onboarding gate
   shell/         # 5-tab PageView, floating nav bar, auto-backup triggers
-  core/          # theme, motion, currency, date-range and formatting primitives
-  data/          # drift database (schema v6), providers, settings repos
+  core/          # theme, glass, motion, currency, date-range and formatting
+  data/          # drift database (schema v7), providers, settings repos
   features/      # home · records · loans · projects · search · settings · backup
                  # about · onboarding · mascot (Xpy) · shared widgets
 ```

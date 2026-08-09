@@ -3,7 +3,9 @@
 All notable changes to Xpense Tracker. Each version links to its GitHub release,
 where the signed APKs are attached.
 
-## Unreleased
+## [v1.0.4](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.4)
+
+> Installs straight over v1.0.3 — no uninstall, nothing to back up first.
 
 ### Added
 - **Loan instalments.** Lend someone 5,000 and get it back 2,000 at a time — each
@@ -18,6 +20,10 @@ where the signed APKs are attached.
 - **Filter by several categories at once** on Records, Loans and Projects —
   tap as many as you like and "All" clears the selection. Totals follow the
   selection
+- **Glass chrome.** App bars, the floating nav bar and bottom sheets are
+  translucent, with your content visibly passing beneath them. Applied only to
+  navigation — never over records, balances or anything you need to read
+- **Reduce transparency** setting under Appearance, for solid bars and sheets
 
 ### Changed
 - **Borrowed money now raises your balance instead of lowering it.** Cash you
@@ -27,6 +33,8 @@ where the signed APKs are attached.
   **Your balance will change when you update**, by twice the total you have
   outstanding on borrowed loans
 - Tapping a loan opens the loan instead of the edit form; edit is on its app bar
+- Bottom sheets share one chrome. Five screens had drifted to their own corner
+  radius and their own drag handle
 - **The dark theme is deeper and no longer grey.** Rebuilt on a cool-tinted
   near-black (`#090C12`) with surfaces stepping 5-8% at a time. Contrast is
   unchanged at ~14:1, so it reads richer without becoming harsh
