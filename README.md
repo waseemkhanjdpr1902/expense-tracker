@@ -1,121 +1,80 @@
-# Xpense Tracker
-
-A clean, offline-first personal finance app for Android. Track expenses, income, loans, and projects — with optional, private Google Drive backup.
+<h1 align="center">Xpense Tracker</h1>
 
 <p align="center">
-  <img src="assets/app-images/xpense-tracker-1.jpeg" width="240" />
-  <img src="assets/app-images/xpense-tracker-2.jpeg" width="240" />
-  <img src="assets/app-images/xpense-tracker-3.jpeg" width="240" />
-  <img src="assets/app-images/xpense-tracker-4.jpeg" width="240" />
-  <img src="assets/app-images/xpense-tracker-5.jpeg" width="240" />
-  <img src="assets/app-images/xpense-tracker-6.jpeg" width="240" />
-  <img src="assets/app-images/xpense-tracker-7.jpeg" width="240" />
+  An offline-first personal finance app for Android — expenses, income, loans and
+  project budgets, with optional private Google&nbsp;Drive backup.
 </p>
 
-## Download
+<p align="center">
+  <a href="https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/saranzafar/expense-tracker-flutter-mobile-app?style=flat-square" /></a>
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Android-3ddc84?style=flat-square" />
+  <img alt="Built with Flutter" src="https://img.shields.io/badge/Flutter-3.44-02569B?style=flat-square" />
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" /></a>
+</p>
 
-**[⬇ Download v1.0.2 — latest release](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.2)**
+<p align="center">
+  <img src="assets/app-images/xpense-tracker-1.jpeg" width="200" />
+  <img src="assets/app-images/xpense-tracker-2.jpeg" width="200" />
+  <img src="assets/app-images/xpense-tracker-3.jpeg" width="200" />
+  <img src="assets/app-images/xpense-tracker-4.jpeg" width="200" />
+</p>
 
-| APK | Architecture | Size |
-|-----|-------------|------|
-| [`app-arm64-v8a-release.apk`](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/download/v1.0.2/app-arm64-v8a-release.apk) | 64-bit · recommended (~95 % of devices) | 21.6 MB |
-| [`app-armeabi-v7a-release.apk`](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/download/v1.0.2/app-armeabi-v7a-release.apk) | 32-bit legacy | 19.1 MB |
-| [`app-x86_64-release.apk`](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/download/v1.0.2/app-x86_64-release.apk) | x86 / emulators | 23.2 MB |
+## Install
 
-Enable **"Install from unknown sources"** on your device, then open the APK. The app works fully offline — Google Sign-In is optional and only needed for Drive backup.
+Download the APK for your device from the
+**[latest release](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/latest)**.
+Most phones need `app-arm64-v8a-release.apk`; `armeabi-v7a` covers 32-bit devices and `x86_64`
+covers emulators.
 
----
+Enable **Install from unknown sources**, then open the file.
+
+> [!WARNING]
+> **Upgrading from v1.0.2 or earlier requires an uninstall.** v1.0.3 is signed with a new release
+> key, so Android will refuse to install it over the old version — and uninstalling deletes the
+> local database, which is the only copy your records have.
+>
+> Back up first: in the old version, **Settings → Backup → Back up now**. Then uninstall, install
+> v1.0.3, sign in and restore. Fresh installs are unaffected.
 
 ## Features
 
-### Records
-- Four record types: **expense**, **income**, **loan given**, **loan taken**
-- Swipe to delete with confirmation dialog
-- Infinite-scroll pagination (50 records per page)
-- Category badges on each record tile
+**Records** — four types (expense, income, loan given, loan taken) over one shared category pool,
+with swipe-to-delete, paginated history and live income / expense / net totals for whatever filter
+is active.
 
-### Categories
-- Shared category pool across income and expense records
-- Create, rename, and delete categories from Settings → Categories
-- Category-based filtering on the Records page
+**Loans** — track money lent and borrowed, mark it repaid, and keep the history. Every outstanding
+loan is visible by default, so a debt from six months ago can't quietly scroll off the screen.
 
-### Home Dashboard
-- Balance card with hide/show toggle (persisted across restarts)
-- Monthly income and expense mini-stats
-- **Overview chart** — income vs expense line chart with 1W / 1M / 1Y and **custom date range** picker
-- Income, expense and net totals for the active chart period
-- Outstanding loans and borrowed-money summary card
+**Projects** — budget, timeline and payment tracking for client work. Payments post as income, so
+they raise your balance and appear in Recent Activity. Completion is an explicit decision rather
+than a calculation: a project can be delivered while money is owed, or fully paid while work
+continues.
 
-### Loans
-- Track money lent to others and money borrowed from others
-- Mark as returned / repaid; history preserved in Returned tab
-- **Shows every outstanding loan by default** — an "All" date option means a debt from six months ago can't quietly fall off the screen
-- Filter by type, category and date range
+**Search** — one global field across records, loans, projects and categories, plus a scoped search
+on each list that stacks with the active filters and keeps the totals in agreement. Category names
+match too, so "groceries" finds everything filed under it even when the word appears in no
+description.
 
-### Projects
-- Create projects with name, description, start/end dates, total budget, advance payment, and category
-- **Mark complete / re-open** — completion is your call, not the maths. A project stays ongoing until you say it's done, even when fully paid, and can be marked done while money is still owed
-- **Status filter** — All / Ongoing / Completed, defaulting to Ongoing so finished work drops out of the list
-- Each card shows what's still **remaining** (or "Fully paid" / "extra" when overpaid)
-- Vertical payment timeline — tap to add further payments at any time
-- **Payments count as income** — the advance and every later payment flow straight into your available balance and appear in Recent Activity (recorded as income, tagged with the project name)
-- Filter by category and date range
+**Backup** — optional Google Drive backup into a private app-data folder that stays invisible in
+the Drive UI. It carries your settings as well as your data, refuses to overwrite a newer copy made
+on another device, and restores in place without an app restart.
 
-### Search
-- **Global search** from the Home header — one field across expenses, income,
-  loans, projects and categories, grouped by section with a "See all" that opens
-  the right tab already filtered
-- Opens with an **expand-from-the-icon** transition and closes back into it
-- Matches descriptions, counterparty names, project names and **category names**
-  — searching "groceries" finds everything filed under Groceries even when the
-  word appears in no description
-- Matched text is highlighted in the results
-- **Per-page search** on Records, Loans and Projects: narrows the list you're
-  already looking at, stacks with the active filters, and the totals boards
-  recompute to match. Swipe-to-delete, edit and mark-repaid keep working
-- Punctuation is literal — searching `30%` finds "Advance — 30%", not everything
+**Design** — Material 3 in light and dark, with the dark theme built on Apple's elevation ramp
+rather than pure white on near-black. iOS-style navigation, haptics, and category glyphs derived
+from category names.
 
-### Finance Summary
-- Records page shows income / expense / net totals for the current filter — updates live as filters change
+**Xpy** — a code-drawn pixel cat on the home screen whose mood follows your month's net.
 
-### Xpy — your money companion
-- A **fully code-drawn pixel cat** (no image assets) that lives on the home screen and is the face of the app
-- Mood tracks your month's net — happy when saving, worried when overspending, sleepy when there's nothing to track
-- Always alive: breathing, blinking, ear-twitches, yawns, tail-wags, hops and little walks
-- Reacts to your money (sparkles on income, a crumb on spend) and to you — **tap to pet** for red hearts and a rotating set of facial expressions
+## Privacy
 
-### Design
-- **Dark theme built on Apple's elevation ramp** — surfaces step from `#1C1C1E` to `#3A3A3C` and text is `#EBEBF5` rather than pure white. Contrast drops from 19.7:1 to 14.4:1: still far above the accessibility floor, but no longer the glare that makes a dark screen tiring
-- **The accent adapts** — the lime desaturates in dark mode instead of buzzing against the background
-- **iOS-style navigation** — every screen slides in with the outgoing page parallaxing behind it, and a record's icon flies into its detail page
-- **Haptics and press feedback** on the things you actually tap
-- **Icons that mean something** — each category picks its own glyph from its name, so a long list is scannable at a glance
-- Retuning the whole dark theme is one block of constants (see [CLAUDE.md](CLAUDE.md))
-- Material 3, fully light and dark-mode aware, with tabular figures so numbers never jitter
-- Frosted glass floating nav bar with smooth decoupled pill animation
-- Soft card depth, uppercase overline section labels, staggered entrance + press feedback
-- Smooth motion throughout (fade, size, cross-fade transitions)
-- **Pull-to-refresh** on every main tab; 10 currencies, system / light / dark theme toggle
+Everything is local by default. Records live in a SQLite database on the device and settings in
+`SharedPreferences`; the app is fully usable with no account and no network. Google Sign-In exists
+only to enable Drive backup, and the backup goes to a folder scoped to this app that no other
+application can read.
 
-### Backup
-- Optional Google Drive backup to a **private app-data folder** (invisible in Drive UI)
-- Backs up your **settings too** (currency, theme, display name) — a restore on a new device brings them all back
-- Auto-backup on app launch, on reconnect, and when the app is backgrounded (throttled)
-- **Conflict-safe** — auto-backup won't overwrite a newer cloud copy made on another device; it prompts you to restore instead
-- **Instant restore** — restored data shows immediately, no app restart needed
-- Surfaces failed backups so you're never left thinking you're protected when you aren't
-- Manual backup / restore from Settings → Backup
-
----
-
-## Tech Stack
+## Architecture
 
 Flutter · Riverpod 2 · Drift (SQLite) · fl_chart · `google_sign_in` · `googleapis` · Material 3
-
-All data lives in a local SQLite database (`xpense.sqlite`) on the device; settings live in
-`SharedPreferences`. Nothing leaves the phone unless you turn on Drive backup.
-
-### How it's organised
 
 ```text
 lib/
@@ -128,11 +87,7 @@ lib/
                  # about · onboarding · mascot (Xpy) · shared widgets
 ```
 
-Architecture notes, invariants and conventions for contributors: [CLAUDE.md](CLAUDE.md).
-
----
-
-## Build from Source
+## Build from source
 
 ```bash
 git clone https://github.com/saranzafar/expense-tracker-flutter-mobile-app.git
@@ -142,64 +97,16 @@ dart run build_runner build --delete-conflicting-outputs
 flutter run
 ```
 
-For Google Drive backup and release-signing setup, see [SETUP.md](SETUP.md).
+Requires the Flutter SDK (Dart `^3.11.5`) and an Android device or emulator. Android is the only
+maintained platform.
 
----
+## Documentation
 
-## Changelog
-
-### [v1.0.3](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.3)
-- **A dark theme that's comfortable to use.** The old one paired near-black with pure white — measured 19.7:1, beyond even the AAA accessibility ceiling, which is what makes a dark screen tiring after a few minutes. Rebuilt on Apple's elevation ramp, with the accent desaturating in dark mode. Fixes three real bugs on the way: unreadable text on soft-green panels, a danger red that already failed contrast, and a mascot bright enough to glow
-- **Navigation that feels like iOS** — consistent slide transitions, predictive back, and a record's icon flying into its detail page
-- **Iconography** — one icon family throughout, and categories now derive their own glyph from their name
-- Haptic feedback, press states, unified empty states, and skeleton loading in place of spinner flashes
-- **Search.** Global search from Home across records, loans, projects and
-  categories, plus a per-page search on Records, Loans and Projects that narrows
-  the current list and keeps the totals in agreement with it
-- **Projects: mark complete / re-open.** Completion is an explicit decision, not
-  "you've been paid in full" — a project can be delivered while money is still
-  owed, or fully paid while work continues
-- **Projects: All / Ongoing / Completed filter**, defaulting to Ongoing
-- **Project cards show what's remaining** — no more subtracting in your head
-- **Loans and Projects default to "All" dates.** Previously Loans showed only
-  the last 30 days, so an unpaid loan from three months ago was invisible on the
-  screen whose whole job is tracking it
-- Project detail now updates in place after an edit or a status change (it used
-  to show a stale snapshot until you left and came back)
-- Database schema 5 → 6. Older backups restore fine on this version; a backup
-  made *by* this version can't be restored onto an older build until it updates
-
-### [v1.0.2](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.2)
-- **Meet Xpy** — a code-drawn pixel-cat companion on the home screen. Its mood follows your month's net (saving = happy, overspending = worried, quiet = sleepy); it breathes, blinks, looks around, twitches its ears, yawns, wags, hops and takes little walks on its own; reacts when your balance moves (sparkles for income, red hearts when you pet it); and cycles fun expressions (wink, ^_^, O_O, heart-eyes, star-eyes, tongue, dizzy) each time you tap it
-- Home chart: tap the **Income / Expense legend** to hide a line — the chart rescales to the remaining one
-- **Loans**: rich filter sheet (type · category · date range) + a Lent / Borrowed / Net summary board
-- **Projects**: Budget / Received / Remaining summary board that reacts to the active filter
-- **Pull-to-refresh** on Home, Records, Loans and Projects to force-reload if anything ever looks stale
-- **Reliable auto-backup**: fixed a launch race so it fires when Google sign-in lands, plus a debounced backup after any edit — the same backup the manual button runs, no extra permissions
-- Projects: advance and timeline payments now post as income — they raise your available balance and show in Recent Activity (editing/deleting a project payment stays in sync with its income record, and vice-versa)
-- Backup now includes app settings (currency, theme, display name, balance visibility) and restores them too
-- Restore is instant — no app restart required — and clears stale `-wal`/`-shm` files so a restored database can't be corrupted by a replayed write-ahead log
-- Auto-backup conflict guard: skips (and warns) instead of overwriting a cloud backup that's newer than this device's last upload
-- Failed auto-backups are surfaced on the Backup page (network errors treated as transient)
-- **UI polish**: tabular figures so numbers don't jitter while animating, softer card depth, uppercase overline section labels, staggered home entrance + press feedback, redesigned record tiles and day-group headers with daily net totals
-
-### [v1.0.1](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.1)
-- Custom date range picker on the home chart (daily/monthly buckets auto-selected)
-- Income / expense / net totals strip on both the home chart card and the Records page
-- Projects — budget tracking with vertical payment timeline and category + date filters
-- Loan taken record type with its own section in the Loans tab
-- Shared categories across all record types with Settings → Categories management
-- Infinite-scroll pagination on the Records page (50 records per page)
-- Dark mode: chip text, category badge, and card surface colour fixes
-- Balance card: dark-gray surface in dark mode (no longer inverts to white)
-- Floating nav bar: frosted glass in light mode (white bg, black border, soft shadow); smooth white border in dark mode; green active pill
-- Nav bar animation: pill travels directly from source to target tab (400 ms easeInOutCubic) — no intermediate tabs light up; swipe tracks the finger frame-perfectly
-
-### [v1.0.0](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.0)
-- Initial release: expense, income, loan-given records
-- Google Drive backup, 10 currencies, light/dark themes
-
----
+| | |
+|---|---|
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [SETUP.md](SETUP.md) | Google Drive backup setup, release signing, keystore recovery |
+| [CLAUDE.md](CLAUDE.md) | Architecture, invariants and conventions for contributors |
 
 ## License
 

@@ -61,9 +61,21 @@ No `google-services.json` is needed — that's for Firebase. `google_sign_in` 6.
 
 ### Troubleshooting
 
+- **"Sign-in not configured (error 10)"** — `DEVELOPER_ERROR`. Google matches the app by
+  `(package name + SHA-1 of the signing key)` and found no OAuth client for that pair. Either the
+  fingerprint was never registered, or **the signing key changed** — a new machine has a new debug
+  keystore, and a regenerated release keystore has a new fingerprint too. Fix it in the Console, not
+  in the code: see [§ 4](#4-changing-machines-or-rotating-the-signing-key).
+- **There is no client ID in this codebase, and that's correct.** `GoogleSignIn` is constructed with
+  scopes only (`google_auth.dart`), there's no `google-services.json`, and Android OAuth clients are
+  never referenced by ID at runtime. Pasting a client ID into the app fixes nothing.
 - **"Sign in failed" / silent fail**: 90% of the time this is the SHA-1 mismatch. Re-run `./gradlew signingReport`, paste the *exact* SHA-1 (uppercase, with colons), wait a couple of minutes for Google to propagate.
 - **"This app is blocked"**: your test account isn't in the consent-screen test-users list. Add it.
 - **"403 storageQuotaExceeded"**: the user's Drive is full. We surface this in the Backup screen.
+- **Nothing changed after editing an OAuth client** — propagation takes 5 minutes to a few hours
+  (Google says so on the client page). Retrying immediately still returns error 10 and looks like
+  the edit failed. Also confirm the edit actually *saved*: the toast reads **"OAuth client saved"**,
+  which is not the same as **"Client ID copied to clipboard"**.
 
 ### "This app isn't verified" on the login screen
 
@@ -91,11 +103,18 @@ Debug-signed APKs from `flutter run` are fine for development, but to publish or
 
 ```bash
 mkdir -p ~/keystores
-keytool -genkey -v -keystore ~/keystores/xpense-release.jks \
-  -keyalg RSA -keysize 2048 -validity 10000 -alias xpense
+keytool -genkeypair -v -keystore ~/keystores/xpense-release.jks \
+  -keyalg RSA -keysize 4096 -validity 10950 -alias xpense
 ```
 
-⚠ **Back up the `.jks` file and its passwords to a password manager + encrypted cloud storage.** Lose this file = can never update the app on the same install path.
+⚠ **Back up the `.jks` file and its passwords to a password manager + encrypted cloud storage —
+somewhere that is not this laptop.** Losing it means every existing user must uninstall (destroying
+their local database) before they can install your next version. That has already happened once to
+this app; see [§ 4](#4-changing-machines-or-rotating-the-signing-key).
+
+The keystore is **not** a build artifact. It, its passwords, and the fingerprints registered in
+Google Cloud are the app's permanent identity — treat them like the domain name, not like
+`build/`.
 
 ### b) Wire it into the build
 
@@ -131,7 +150,7 @@ Wait ~5 minutes after saving for propagation.
 ```bash
 flutter clean && flutter pub get
 flutter build apk --release --split-per-abi \
-  --obfuscate --split-debug-info=build/symbols/v1.0.2   # match pubspec `version:`
+  --obfuscate --split-debug-info=build/symbols/1.0.3   # match pubspec `version:`
 ```
 
 Outputs three APKs in `build/app/outputs/flutter-apk/`. Ship `app-arm64-v8a-release.apk` to ~95 % of users.
@@ -141,3 +160,80 @@ For Play Store, use `flutter build appbundle --release ...` instead. Play re-sig
 ### e) Always archive
 
 Each release: keep the matching `build/symbols/<version>` folder, the APK files, and a note of the git commit hash. Without the symbols, obfuscated crash reports from that build can never be decoded.
+
+---
+
+## 4. Changing machines, or rotating the signing key
+
+Both signing keys live outside the repo, so a fresh laptop has **neither**. Sign-in then fails with
+error 10 on every build until the new fingerprints are registered. This section is the recovery
+playbook — it has already been needed once.
+
+### a) Work out which key signs the build you're testing
+
+| Build | Signed with | Fingerprint from |
+| --- | --- | --- |
+| `flutter run` / `flutter build apk --debug` | `~/.android/debug.keystore` (auto-created per machine) | `Variant: debug` |
+| `flutter build apk --release` with `android/key.properties` present | your release keystore | `Variant: release` |
+| `flutter build apk --release` **without** `key.properties` | falls back to the *debug* key — see `build.gradle.kts` | `Variant: debug` |
+
+That last row is the quiet one: a "release" APK can be debug-signed, and then only the debug
+fingerprint will let it sign in.
+
+```bash
+cd android && ./gradlew signingReport      # both variants, SHA-1 and SHA-256
+```
+
+To check what actually signed an APK you already built or downloaded:
+
+```bash
+$ANDROID_HOME/build-tools/<ver>/apksigner verify --print-certs app-arm64-v8a-release.apk
+```
+
+### b) If you still have the release keystore
+
+Copy the `.jks` across, recreate `android/key.properties` pointing at it (see § 3b), and register
+the **new machine's debug** SHA-1. The release fingerprint is unchanged, so existing installs keep
+updating normally. Nothing else to do.
+
+### c) If the release keystore is gone
+
+It cannot be recovered or recreated — the fingerprint is derived from a private key that no longer
+exists. Generate a new one (§ 3a) and accept the consequences:
+
+- **Every existing install must be uninstalled** before the new build will install. Android refuses
+  an APK whose certificate differs from the installed one, and there is no override.
+- **Uninstalling wipes the local database.** Tell users to back up to Drive *first*, in the old
+  version, while its sign-in still works — which means fixing the OAuth fingerprint before you ship,
+  not after.
+- Bump `version:` in `pubspec.yaml` as usual; the version code is unrelated to signing.
+
+### d) Update the OAuth clients
+
+Google Cloud Console → **APIs & Services → Credentials**. There is one Android client per
+`(package name, SHA-1)` pair, and the fingerprint field is editable.
+
+**Edit the existing clients rather than creating new ones.** When a key is gone for good there is
+nothing to preserve, and replacing keeps the list at two working clients instead of four with two
+dead ones. Creating a second client is only right when both keys are still in use.
+
+| Client | Set its SHA-1 to |
+| --- | --- |
+| `Xpense Tracker Android (release)` | `Variant: release` fingerprint of your release keystore |
+| `Xpense Tracker Android (debug)` | `Variant: debug` fingerprint from *this* machine |
+
+Package name stays `com.example.xpense_traker` on both. Save — confirm the toast says **"OAuth
+client saved"** — then wait 5+ minutes for propagation before retrying on the device.
+
+### e) Checklist
+
+```text
+[ ] release keystore restored or regenerated, and backed up OFF this machine
+[ ] android/key.properties recreated (gitignored — never commit it)
+[ ] ./gradlew signingReport run; both SHA-1s copied
+[ ] release OAuth client SHA-1 updated + saved
+[ ] debug OAuth client SHA-1 updated + saved
+[ ] your account still listed under OAuth consent screen → Test users
+[ ] waited for propagation, then Connect Google succeeds on a real build
+[ ] if the release key changed: release notes warn users to back up before uninstalling
+```

@@ -13,8 +13,14 @@ account and no network; Google Sign-In exists *only* for backup.
   baked into the Android `applicationId` `com.example.xpense_traker`, which is
   the install identity of every shipped release and the package name registered
   on the OAuth clients. **Do not rename it.**)
-- Version lives in `pubspec.yaml` (`version: 1.0.2+3`). The UI never hardcodes
+- Version lives in `pubspec.yaml` (`version: 1.0.3+4`). The UI never hardcodes
   it — `appVersionProvider` reads it via `package_info_plus` at runtime.
+- **Signing identity changed at v1.0.3.** The original release keystore was lost
+  in a laptop migration, so v1.0.3 onward is signed with a new key and cannot
+  install over v1.0.2 — users had to uninstall and restore from backup. Don't
+  let it happen a third time: the keystore, its passwords and the OAuth
+  fingerprints are the app's identity, not build artifacts. See
+  [SETUP.md § 4](SETUP.md).
 - Android is the only shipping platform. iOS/macOS/Linux/Windows/web scaffolding
   exists from `flutter create` but is unmaintained (launcher icons and native
   splash are generated for Android only).
@@ -263,8 +269,13 @@ nothing until relevant:
 
 ## Docs to keep in sync
 
-- `README.md` — user-facing feature list + changelog. Update on any user-visible
-  change; add a changelog entry per release tag.
-- `SETUP.md` — Google Cloud / OAuth, keystore, release build steps.
+- `README.md` — the shop window: what the app is, how to install it, how it's
+  built. Prose over bullet dumps, and **no changelog** — that moved to its own
+  file precisely because release notes were crowding out the description.
+- `CHANGELOG.md` — one section per release tag, grouped Added / Changed / Fixed.
+  Add an entry for every user-visible change; the GitHub release notes are
+  written from it.
+- `SETUP.md` — Google Cloud / OAuth, keystore, release build steps, and the
+  machine-migration recovery playbook (§ 4).
 - `docs/superpowers/specs/` — design docs written before larger features. Keep
   the pattern for anything non-trivial.

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/currency.dart';
 import '../../../core/debounce.dart';
+import '../../../core/haptics.dart';
 import '../../../core/hero.dart';
+import '../../../core/routes.dart';
 import '../../../core/motion.dart';
 import '../../../core/search_text.dart';
 import '../../../core/theme.dart';
@@ -152,7 +154,6 @@ class _GlobalSearchPageState extends ConsumerState<GlobalSearchPage> {
                           show: _kShow,
                           fetch: _kFetch,
                           onSeeAll: _seeAll,
-                          onNavigate: _close,
                         ),
                 ),
               ),
@@ -274,7 +275,6 @@ class _Results extends ConsumerWidget {
     required this.show,
     required this.fetch,
     required this.onSeeAll,
-    required this.onNavigate,
   });
 
   final String query;
@@ -282,7 +282,6 @@ class _Results extends ConsumerWidget {
   final int fetch;
   final void Function({required int tab, RecordsFilter? type, String? categoryId})
       onSeeAll;
-  final VoidCallback onNavigate;
 
   List<RecordRow> _records(WidgetRef ref, Set<RecordType> types) =>
       ref
@@ -354,11 +353,15 @@ class _Results extends ConsumerWidget {
                 subtitle: p.description,
                 trailing: formatMoney(p.totalAmountMinor, currency),
                 highlight: query,
+                // Push *onto* search rather than closing it first, exactly as
+                // RecordTile does. Closing was a race that ate the new page:
+                // _close() unfocuses, waits 80ms, then pops — by which time
+                // the detail route is on top, so the pop killed it and you
+                // landed back on the results. Leaving search underneath also
+                // means Back returns to your results instead of Home.
                 onTap: () {
-                  onNavigate();
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => ProjectDetailPage(initialProject: p),
-                  ));
+                  AppHaptics.light();
+                  AppRoute.push(context, ProjectDetailPage(initialProject: p));
                 },
               ),
           ],

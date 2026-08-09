@@ -1,0 +1,91 @@
+# Changelog
+
+All notable changes to Xpense Tracker. Each version links to its GitHub release,
+where the signed APKs are attached.
+
+## [v1.0.3](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.3)
+
+> **Breaking for existing installs.** This release is signed with a new release key, so Android
+> will not install it over v1.0.2 — the old keystore was lost in a laptop migration and cannot be
+> recovered. Back up to Drive from the old version first, then uninstall, install v1.0.3 and
+> restore. Fresh installs are unaffected.
+
+### Added
+- **Global search** from the Home header across records, loans, projects and categories, plus
+  per-page search on Records, Loans and Projects that narrows the current list and keeps the
+  totals in agreement with it
+- **Projects: mark complete / re-open.** Completion is an explicit decision, not "you've been paid
+  in full" — a project can be delivered while money is still owed, or fully paid while work continues
+- **Projects: All / Ongoing / Completed filter**, defaulting to Ongoing
+- Project cards show the **remaining** amount
+- Haptic feedback and press states throughout
+
+### Changed
+- **Dark theme rebuilt on Apple's elevation ramp.** The previous theme paired near-black with pure
+  white — 19.7:1 measured, beyond even the AAA ceiling, which is what makes a dark screen tiring
+  after a few minutes. Text now sits at 14.4:1 and the accent desaturates in dark mode
+- **iOS-style navigation** — consistent slide transitions, predictive back, and a record's icon
+  flying into its detail page
+- **One icon family throughout**; categories derive their own glyph from their name
+- Unified empty states and skeleton loading in place of spinner flashes
+- **Loans and Projects default to "All" dates.** Loans previously showed only the last 30 days, so
+  an unpaid loan from three months ago was invisible on the screen whose whole job is tracking it
+- Database schema 5 → 6. Older backups restore fine on this version; a backup made *by* this
+  version can't be restored onto an older build until it updates
+
+### Fixed
+- Unreadable text on soft-green panels (measured 2.11:1)
+- A danger red that already failed WCAG AA at 4.23:1
+- List rows had no pressed state at all — the ink splash was disabled app-wide
+- A text field inside a dialog builder that lost cursor position on every rebuild
+- Project detail showed a stale snapshot after an edit until you navigated away and back
+
+## [v1.0.2](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.2)
+
+### Added
+- **Xpy**, a code-drawn pixel-cat companion on the home screen. Its mood follows your month's net
+  (saving = happy, overspending = worried, quiet = sleepy); it breathes, blinks, looks around,
+  twitches its ears, yawns, wags, hops and takes little walks on its own; reacts when your balance
+  moves; and cycles expressions each time you tap it
+- Home chart: tap the **Income / Expense legend** to hide a line — the chart rescales to the remainder
+- **Loans**: filter sheet (type · category · date range) + a Lent / Borrowed / Net summary board
+- **Projects**: Budget / Received / Remaining summary board that reacts to the active filter
+- **Pull-to-refresh** on Home, Records, Loans and Projects
+- Backup now includes app settings (currency, theme, display name, balance visibility)
+
+### Changed
+- Project advance and timeline payments post as income — they raise your available balance and show
+  in Recent Activity, and editing or deleting either side stays in sync with the other
+- Restore is instant, with no app restart
+- **UI polish**: tabular figures so numbers don't jitter while animating, softer card depth,
+  uppercase overline section labels, staggered home entrance, redesigned record tiles and day-group
+  headers with daily net totals
+
+### Fixed
+- Auto-backup launch race — it now fires when Google sign-in lands, plus a debounced backup after
+  any edit
+- Restore clears stale `-wal`/`-shm` files, so a replayed write-ahead log can't corrupt restored data
+- Auto-backup conflict guard: skips and warns instead of overwriting a cloud backup newer than this
+  device's last upload
+- Failed auto-backups are surfaced on the Backup page (network errors treated as transient)
+
+## [v1.0.1](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.1)
+
+### Added
+- Custom date-range picker on the home chart (daily/monthly buckets auto-selected)
+- Income / expense / net totals on both the home chart card and the Records page
+- **Projects** — budget tracking with a vertical payment timeline and category + date filters
+- **Loan taken** record type with its own section in the Loans tab
+- Shared categories across all record types, managed from Settings → Categories
+- Infinite-scroll pagination on the Records page (50 records per page)
+
+### Fixed
+- Dark mode: chip text, category badge and card surface colours
+- Balance card no longer inverts to white in dark mode
+- Nav bar pill travels directly from source to target tab (400ms `easeInOutCubic`) instead of
+  lighting up every tab in between; swipe tracks the finger frame-perfectly
+
+## [v1.0.0](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.0)
+
+Initial release — expense, income and loan-given records, Google Drive backup, 10 currencies, and
+light/dark themes.

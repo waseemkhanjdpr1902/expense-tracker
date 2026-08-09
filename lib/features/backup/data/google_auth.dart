@@ -72,9 +72,12 @@ class GoogleAuthNotifier extends Notifier<GoogleSignInAccount?> {
     final msg = e.message ?? '';
     // Android Google Play Services status codes
     if (msg.contains('10:') || msg.contains('DEVELOPER_ERROR') || code == '10') {
-      return 'Sign-in not configured (error 10). '
-          'Add this debug SHA-1 + package name to your OAuth client in '
-          'Google Cloud Console. See SETUP.md.';
+      // Deliberately doesn't say "debug" — a release build signed with a
+      // regenerated (or missing) keystore hits this too, and naming the wrong
+      // keystore sends you to the wrong fingerprint.
+      return 'Sign-in not configured (error 10). The signing key of this '
+          "build isn't registered in Google Cloud Console — add its SHA-1 "
+          'and package name to the matching OAuth client. See SETUP.md § 4.';
     }
     if (msg.contains('12500')) {
       return 'Google Play Services missing or outdated on this device.';
