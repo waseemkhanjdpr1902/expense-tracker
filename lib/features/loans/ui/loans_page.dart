@@ -50,12 +50,13 @@ class _LoansPageState extends ConsumerState<LoansPage>
   String? _query;
 
   LoanTypeFilter _type = LoanTypeFilter.all;
-  String? _categoryId;
+  /// Multi-select: empty means no category filter.
+  Set<String> _categoryIds = {};
   DateRangeFilter _range = DateRangeFilter.all;
 
   bool get _hasActiveFilters =>
       _type != LoanTypeFilter.all ||
-      _categoryId != null ||
+      _categoryIds.isNotEmpty ||
       _range != DateRangeFilter.all;
 
   @override
@@ -110,19 +111,19 @@ class _LoansPageState extends ConsumerState<LoansPage>
       transparent: true,
       builder: (_) => _LoansFilterSheet(
         initialType: _type,
-        initialCategoryId: _categoryId,
+        initialCategoryIds: _categoryIds,
         initialRange: _range,
-        onChanged: (type, categoryId, range) {
+        onChanged: (type, categoryIds, range) {
           setState(() {
             _type = type;
-            _categoryId = categoryId;
+            _categoryIds = categoryIds;
             _range = range;
           });
         },
         onReset: () {
           setState(() {
             _type = LoanTypeFilter.all;
-            _categoryId = null;
+            _categoryIds = {};
             _range = DateRangeFilter.all;
           });
         },
@@ -145,7 +146,7 @@ class _LoansPageState extends ConsumerState<LoansPage>
         setState(() {
           _query = pending.query;
           _searchController.text = pending.query;
-          if (pending.categoryId != null) _categoryId = pending.categoryId;
+          if (pending.categoryId != null) _categoryIds = {pending.categoryId!};
         });
         _searchAnim.value = 1;
         ref.read(searchBackInterceptorProvider.notifier).state = _closeSearch;
@@ -158,14 +159,14 @@ class _LoansPageState extends ConsumerState<LoansPage>
     final outstandingQuery = LoansQuery(
       returned: false,
       type: _type,
-      categoryId: _categoryId,
+      categoryIds: categoryKey(_categoryIds),
       range: _range,
       query: _query,
     );
     final returnedQuery = LoansQuery(
       returned: true,
       type: _type,
-      categoryId: _categoryId,
+      categoryIds: categoryKey(_categoryIds),
       range: _range,
       query: _query,
     );
@@ -573,15 +574,15 @@ class _Badge extends StatelessWidget {
 class _LoansFilterSheet extends ConsumerStatefulWidget {
   const _LoansFilterSheet({
     required this.initialType,
-    required this.initialCategoryId,
+    required this.initialCategoryIds,
     required this.initialRange,
     required this.onChanged,
     required this.onReset,
   });
   final LoanTypeFilter initialType;
-  final String? initialCategoryId;
+  final Set<String> initialCategoryIds;
   final DateRangeFilter initialRange;
-  final void Function(LoanTypeFilter, String?, DateRangeFilter) onChanged;
+  final void Function(LoanTypeFilter, Set<String>, DateRangeFilter) onChanged;
   final VoidCallback onReset;
 
   @override
@@ -590,7 +591,7 @@ class _LoansFilterSheet extends ConsumerStatefulWidget {
 
 class _LoansFilterSheetState extends ConsumerState<_LoansFilterSheet> {
   late LoanTypeFilter _type;
-  late String? _categoryId;
+  late Set<String> _categoryIds;
   late DateRangeFilter _quickRange;
   bool _isCustom = false;
   DateTime? _customStart;
@@ -600,7 +601,7 @@ class _LoansFilterSheetState extends ConsumerState<_LoansFilterSheet> {
   void initState() {
     super.initState();
     _type = widget.initialType;
-    _categoryId = widget.initialCategoryId;
+    _categoryIds = {...widget.initialCategoryIds};
     if (isCustomRange(widget.initialRange)) {
       _isCustom = true;
       final r = widget.initialRange.resolve(DateTime.now());
@@ -621,16 +622,16 @@ class _LoansFilterSheetState extends ConsumerState<_LoansFilterSheet> {
 
   bool get _hasActiveFilters =>
       _type != LoanTypeFilter.all ||
-      _categoryId != null ||
+      _categoryIds.isNotEmpty ||
       _isCustom ||
       _quickRange != DateRangeFilter.all;
 
-  void _notify() => widget.onChanged(_type, _categoryId, _effectiveRange);
+  void _notify() => widget.onChanged(_type, _categoryIds, _effectiveRange);
 
   void _reset() {
     setState(() {
       _type = LoanTypeFilter.all;
-      _categoryId = null;
+      _categoryIds = {};
       _quickRange = DateRangeFilter.all;
       _isCustom = false;
       _customStart = null;
@@ -672,13 +673,13 @@ class _LoansFilterSheetState extends ConsumerState<_LoansFilterSheet> {
     final existing =
         cats.where((c) => c.name.toLowerCase() == name.toLowerCase());
     if (existing.isNotEmpty) {
-      setState(() => _categoryId = existing.first.id);
+      setState(() => _categoryIds = {..._categoryIds, existing.first.id});
       _notify();
       return;
     }
     final row = await ref.read(databaseProvider).addCategory(name);
     if (!mounted) return;
-    setState(() => _categoryId = row.id);
+    setState(() => _categoryIds = {..._categoryIds, row.id});
     _notify();
   }
 
@@ -810,19 +811,20 @@ class _LoansFilterSheetState extends ConsumerState<_LoansFilterSheet> {
                   if (cats.isNotEmpty)
                     _Chip(
                       label: 'All',
-                      selected: _categoryId == null,
+                      selected: _categoryIds.isEmpty,
                       onTap: () {
-                        setState(() => _categoryId = null);
+                        setState(_categoryIds.clear);
                         _notify();
                       },
                     ),
                   for (final cat in cats)
                     _Chip(
                       label: cat.name,
-                      selected: _categoryId == cat.id,
+                      selected: _categoryIds.contains(cat.id),
                       onTap: () {
-                        setState(() => _categoryId =
-                            _categoryId == cat.id ? null : cat.id);
+                        setState(() => _categoryIds.contains(cat.id)
+                            ? _categoryIds.remove(cat.id)
+                            : _categoryIds.add(cat.id));
                         _notify();
                       },
                     ),

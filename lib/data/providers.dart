@@ -1,4 +1,5 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -53,10 +54,21 @@ class RecordsFilter {
   int get hashCode => Object.hashAll(types);
 }
 
+/// Canonical form for a category selection used as part of a family key.
+///
+/// The selection lives in the UI as a `Set`, whose iteration order is insertion
+/// order — pick A then B and you get a different list from B then A, for the
+/// same filter. Sorting makes the key depend on *what* is selected rather than
+/// the order it was tapped, so the two share one cached stream.
+List<String> categoryKey(Set<String> ids) => ids.toList()..sort();
+
 class RecordsQuery {
   final RecordsFilter type;
   final DateRangeFilter range;
-  final String? categoryId;
+  /// Chosen category ids. Stored sorted and compared element-wise: Dart's
+  /// List `==` is identity, so two equal selections built on different
+  /// rebuilds would be unequal keys and leak a new provider every time.
+  final List<String> categoryIds;
   final int limit;
 
   /// Normalised free-text search, or null. MUST appear in == and hashCode:
@@ -67,7 +79,7 @@ class RecordsQuery {
   const RecordsQuery({
     required this.type,
     required this.range,
-    this.categoryId,
+    this.categoryIds = const [],
     this.limit = 50,
     this.query,
   });
@@ -77,12 +89,12 @@ class RecordsQuery {
       other is RecordsQuery &&
       other.type == type &&
       other.range == range &&
-      other.categoryId == categoryId &&
+      listEquals(other.categoryIds, categoryIds) &&
       other.limit == limit &&
       other.query == query;
 
   @override
-  int get hashCode => Object.hash(type, range, categoryId, limit, query);
+  int get hashCode => Object.hash(type, range, Object.hashAll(categoryIds), limit, query);
 }
 
 // autoDispose: the `query` field makes this family's key space unbounded, so
@@ -94,7 +106,7 @@ final filteredRecordsProvider = StreamProvider.autoDispose
         typesIn: q.type.types,
         from: r?.start,
         to: r?.end,
-        categoryId: q.categoryId,
+        categoryIds: q.categoryIds,
         query: q.query,
         categoryIdsIn: matchingCategoryIds(ref, q.query),
         limit: q.limit,
@@ -118,7 +130,10 @@ extension LoanTypeFilterX on LoanTypeFilter {
 class LoansQuery {
   final bool returned;
   final LoanTypeFilter type;
-  final String? categoryId;
+  /// Chosen category ids. Stored sorted and compared element-wise: Dart's
+  /// List `==` is identity, so two equal selections built on different
+  /// rebuilds would be unequal keys and leak a new provider every time.
+  final List<String> categoryIds;
   final DateRangeFilter range;
   /// Normalised free-text search, or null. Must stay in == / hashCode.
   final String? query;
@@ -127,7 +142,7 @@ class LoansQuery {
     required this.returned,
     required this.type,
     required this.range,
-    this.categoryId,
+    this.categoryIds = const [],
     this.query,
   });
 
@@ -136,13 +151,13 @@ class LoansQuery {
       other is LoansQuery &&
       other.returned == returned &&
       other.type == type &&
-      other.categoryId == categoryId &&
+      listEquals(other.categoryIds, categoryIds) &&
       other.range == range &&
       other.query == query;
 
   @override
   int get hashCode =>
-      Object.hash(returned, type, categoryId, range, query);
+      Object.hash(returned, type, Object.hashAll(categoryIds), range, query);
 }
 
 final loansProvider = StreamProvider.autoDispose
@@ -151,7 +166,7 @@ final loansProvider = StreamProvider.autoDispose
   return ref.watch(databaseProvider).watchRecords(
         typesIn: q.type.types,
         loanReturned: q.returned,
-        categoryId: q.categoryId,
+        categoryIds: q.categoryIds,
         from: r?.start,
         to: r?.end,
         query: q.query,
@@ -255,14 +270,17 @@ class RecordsTotals {
 class RecordsTotalsQuery {
   final RecordsFilter type;
   final DateRangeFilter range;
-  final String? categoryId;
+  /// Chosen category ids. Stored sorted and compared element-wise: Dart's
+  /// List `==` is identity, so two equal selections built on different
+  /// rebuilds would be unequal keys and leak a new provider every time.
+  final List<String> categoryIds;
   /// Normalised free-text search, or null. Must stay in == / hashCode.
   final String? query;
 
   const RecordsTotalsQuery(
       {required this.type,
       required this.range,
-      this.categoryId,
+      this.categoryIds = const [],
       this.query});
 
   @override
@@ -270,11 +288,11 @@ class RecordsTotalsQuery {
       other is RecordsTotalsQuery &&
       other.type == type &&
       other.range == range &&
-      other.categoryId == categoryId &&
+      listEquals(other.categoryIds, categoryIds) &&
       other.query == query;
 
   @override
-  int get hashCode => Object.hash(type, range, categoryId, query);
+  int get hashCode => Object.hash(type, range, Object.hashAll(categoryIds), query);
 }
 
 final filteredTotalsProvider = StreamProvider.autoDispose
@@ -286,7 +304,7 @@ final filteredTotalsProvider = StreamProvider.autoDispose
         typesIn: q.type.types,
         from: r?.start,
         to: r?.end,
-        categoryId: q.categoryId,
+        categoryIds: q.categoryIds,
         query: q.query,
         categoryIdsIn: matchingCategoryIds(ref, q.query),
         // no limit — we need totals across all matching records

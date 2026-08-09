@@ -55,7 +55,10 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
 
   RecordsFilter _filter = RecordsFilter.all;
   DateRangeFilter _range = DateRangeFilter.month;
-  String? _selectedCategoryId;
+  /// A Set, not a single id: categories are multi-select. Empty == no
+  /// category filter, which is why 'All' is simply the empty selection
+  /// rather than a sentinel value.
+  Set<String> _selectedCategoryIds = {};
 
   // Pagination
   static const _pageSize = 50;
@@ -131,7 +134,7 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
 
   bool get _hasActiveFilters =>
       _filter != RecordsFilter.all ||
-      _selectedCategoryId != null ||
+      _selectedCategoryIds.isNotEmpty ||
       _range != DateRangeFilter.month;
 
   void _openFilterSheet() {
@@ -140,19 +143,19 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
       transparent: true,
       builder: (_) => _FilterSheet(
         initialType: _filter,
-        initialCategoryId: _selectedCategoryId,
+        initialCategoryIds: _selectedCategoryIds,
         initialRange: _range,
-        onChanged: (type, categoryId, range) {
+        onChanged: (type, categoryIds, range) {
           setState(() {
             _filter = type;
-            _selectedCategoryId = categoryId;
+            _selectedCategoryIds = categoryIds;
             _range = range;
             _limit = _pageSize; // reset pagination on filter change
           });
         },
         onReset: () => setState(() {
           _filter = RecordsFilter.all;
-          _selectedCategoryId = null;
+          _selectedCategoryIds = {};
           _range = DateRangeFilter.month;
           _limit = _pageSize; // reset pagination on filter reset
         }),
@@ -179,7 +182,7 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
           _searchController.text = pending.query;
           if (pending.recordsType != null) _filter = pending.recordsType!;
           if (pending.categoryId != null) {
-            _selectedCategoryId = pending.categoryId;
+            _selectedCategoryIds = {pending.categoryId!};
           }
           _limit = _pageSize;
         });
@@ -192,7 +195,7 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
     final records = ref.watch(filteredRecordsProvider(RecordsQuery(
       type: _filter,
       range: _range,
-      categoryId: _selectedCategoryId,
+      categoryIds: categoryKey(_selectedCategoryIds),
       limit: _limit,
       query: _query,
     )));
@@ -202,7 +205,7 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
     final totals = ref.watch(filteredTotalsProvider(RecordsTotalsQuery(
       type: _filter,
       range: _range,
-      categoryId: _selectedCategoryId,
+      categoryIds: categoryKey(_selectedCategoryIds),
       query: _query,
     )));
     if (records.hasValue) _lastItems = records.value;
@@ -278,7 +281,7 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
             await ref.read(filteredRecordsProvider(RecordsQuery(
               type: _filter,
               range: _range,
-              categoryId: _selectedCategoryId,
+              categoryIds: categoryKey(_selectedCategoryIds),
               limit: _limit,
             )).future);
           },
@@ -491,15 +494,15 @@ class _DayGroup {
 class _FilterSheet extends ConsumerStatefulWidget {
   const _FilterSheet({
     required this.initialType,
-    required this.initialCategoryId,
+    required this.initialCategoryIds,
     required this.initialRange,
     required this.onChanged,
     required this.onReset,
   });
   final RecordsFilter initialType;
-  final String? initialCategoryId;
+  final Set<String> initialCategoryIds;
   final DateRangeFilter initialRange;
-  final void Function(RecordsFilter, String?, DateRangeFilter) onChanged;
+  final void Function(RecordsFilter, Set<String>, DateRangeFilter) onChanged;
   final VoidCallback onReset;
 
   @override
@@ -508,7 +511,7 @@ class _FilterSheet extends ConsumerStatefulWidget {
 
 class _FilterSheetState extends ConsumerState<_FilterSheet> {
   late RecordsFilter _type;
-  late String? _categoryId;
+  late Set<String> _categoryIds;
   late DateRangeFilter _quickRange;
   bool _isCustom = false;
   DateTime? _customStart;
@@ -518,7 +521,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
   void initState() {
     super.initState();
     _type = widget.initialType;
-    _categoryId = widget.initialCategoryId;
+    _categoryIds = {...widget.initialCategoryIds};
     if (isCustomRange(widget.initialRange)) {
       _isCustom = true;
       final r = widget.initialRange.resolve(DateTime.now());
@@ -539,7 +542,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
 
   bool get _hasActiveFilters =>
       _type != RecordsFilter.all ||
-      _categoryId != null ||
+      _categoryIds.isNotEmpty ||
       _isCustom ||
       _quickRange != DateRangeFilter.month;
 
@@ -576,23 +579,23 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
     final existing =
         cats.where((c) => c.name.toLowerCase() == name.toLowerCase());
     if (existing.isNotEmpty) {
-      setState(() => _categoryId = existing.first.id);
-      widget.onChanged(_type, existing.first.id, _effectiveRange);
+      setState(() => _categoryIds = {..._categoryIds, existing.first.id});
+      widget.onChanged(_type, _categoryIds, _effectiveRange);
       return;
     }
     final row = await ref.read(databaseProvider).addCategory(name);
     if (!mounted) return;
-    setState(() => _categoryId = row.id);
-    widget.onChanged(_type, row.id, _effectiveRange);
+    setState(() => _categoryIds = {..._categoryIds, row.id});
+    widget.onChanged(_type, _categoryIds, _effectiveRange);
   }
 
   void _notify() =>
-      widget.onChanged(_type, _categoryId, _effectiveRange);
+      widget.onChanged(_type, _categoryIds, _effectiveRange);
 
   void _reset() {
     setState(() {
       _type = RecordsFilter.all;
-      _categoryId = null;
+      _categoryIds = {};
       _quickRange = DateRangeFilter.month;
       _isCustom = false;
       _customStart = null;
@@ -732,20 +735,20 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                   if (cats.isNotEmpty)
                     _Chip(
                       label: 'All',
-                      selected: _categoryId == null,
+                      selected: _categoryIds.isEmpty,
                       onTap: () {
-                        setState(() => _categoryId = null);
+                        setState(_categoryIds.clear);
                         _notify();
                       },
                     ),
                   for (final cat in cats)
                     _Chip(
                       label: cat.name,
-                      selected: _categoryId == cat.id,
+                      selected: _categoryIds.contains(cat.id),
                       onTap: () {
-                        setState(() =>
-                            _categoryId =
-                                _categoryId == cat.id ? null : cat.id);
+                        setState(() => _categoryIds.contains(cat.id)
+                            ? _categoryIds.remove(cat.id)
+                            : _categoryIds.add(cat.id));
                         _notify();
                       },
                     ),

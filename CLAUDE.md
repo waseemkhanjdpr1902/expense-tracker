@@ -80,6 +80,14 @@ annotation is used anywhere — the only generated file is `database.g.dart`
   (`RecordsQuery`, `RecordsTotalsQuery`, `LoansQuery`, `ChartDateRange`).
   **If you add a field, update both operators** or the family will leak a new
   provider per rebuild.
+- **Collection fields in a key need element-wise equality and a canonical
+  order.** `categoryIds` is a `List<String>`, compared with `listEquals` and
+  hashed with `Object.hashAll` — Dart's `List ==` is identity, so two equal
+  selections built on different rebuilds would be unequal keys. The UI holds a
+  `Set` and passes it through `categoryKey()`, which sorts: a `Set` iterates in
+  insertion order, so Food-then-Fuel and Fuel-then-Food are the same filter but
+  would otherwise be two keys, two cached streams and an `AsyncLoading` flash on
+  reorder. Locked by `test/category_filter_test.dart`.
 - Settings notifiers (`themeModeProvider`, `currencyProvider`,
   `displayNameProvider`, `balanceHiddenProvider`, `backupPrefsProvider`) declare
   a throwaway default in `build()` and are overridden in `main.dart` with values

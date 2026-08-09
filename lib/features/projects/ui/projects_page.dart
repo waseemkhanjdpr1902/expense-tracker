@@ -83,14 +83,15 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
     setState(() => _query = next);
   }
 
-  String? _categoryId;
+  /// Multi-select: empty means no category filter.
+  Set<String> _categoryIds = {};
   DateRangeFilter _range = DateRangeFilter.all;
   ProjectStatusFilter _status = ProjectStatusFilter.ongoing;
 
   // "Active" means "differs from the defaults" — both new defaults must appear
   // here or a fresh launch shows the green dot permanently.
   bool get _hasActiveFilters =>
-      _categoryId != null ||
+      _categoryIds.isNotEmpty ||
       _range != DateRangeFilter.all ||
       _status != ProjectStatusFilter.ongoing;
 
@@ -99,18 +100,18 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
       context,
       transparent: true,
       builder: (_) => _ProjectFilterSheet(
-        initialCategoryId: _categoryId,
+        initialCategoryIds: _categoryIds,
         initialRange: _range,
         initialStatus: _status,
-        onChanged: (categoryId, range, status) {
+        onChanged: (categoryIds, range, status) {
           setState(() {
-            _categoryId = categoryId;
+            _categoryIds = categoryIds;
             _range = range;
             _status = status;
           });
         },
         onReset: () => setState(() {
-          _categoryId = null;
+          _categoryIds = {};
           _range = DateRangeFilter.all;
           _status = ProjectStatusFilter.ongoing;
         }),
@@ -123,7 +124,9 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
     final resolved = _range.resolveOrNull(DateTime.now());
     final q = normalizeQuery(_query)?.toLowerCase();
     return all.where((p) {
-      if (_categoryId != null && p.categoryId != _categoryId) return false;
+      if (_categoryIds.isNotEmpty && !_categoryIds.contains(p.categoryId)) {
+        return false;
+      }
       switch (_status) {
         case ProjectStatusFilter.ongoing:
           if (p.completedAt != null) return false;
@@ -160,7 +163,7 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
         setState(() {
           _query = pending.query;
           _searchController.text = pending.query;
-          if (pending.categoryId != null) _categoryId = pending.categoryId;
+          if (pending.categoryId != null) _categoryIds = {pending.categoryId!};
         });
         _searchAnim.value = 1;
         ref.read(searchBackInterceptorProvider.notifier).state = _closeSearch;
@@ -475,16 +478,17 @@ class _CardShell extends StatelessWidget {
 
 class _ProjectFilterSheet extends ConsumerStatefulWidget {
   const _ProjectFilterSheet({
-    required this.initialCategoryId,
+    required this.initialCategoryIds,
     required this.initialRange,
     required this.initialStatus,
     required this.onChanged,
     required this.onReset,
   });
-  final String? initialCategoryId;
+  final Set<String> initialCategoryIds;
   final DateRangeFilter initialRange;
   final ProjectStatusFilter initialStatus;
-  final void Function(String?, DateRangeFilter, ProjectStatusFilter) onChanged;
+  final void Function(Set<String>, DateRangeFilter, ProjectStatusFilter)
+      onChanged;
   final VoidCallback onReset;
 
   @override
@@ -493,7 +497,7 @@ class _ProjectFilterSheet extends ConsumerStatefulWidget {
 }
 
 class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
-  late String? _categoryId;
+  late Set<String> _categoryIds;
   late DateRangeFilter _quickRange;
   late ProjectStatusFilter _status;
   bool _isCustom = false;
@@ -503,7 +507,7 @@ class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
   @override
   void initState() {
     super.initState();
-    _categoryId = widget.initialCategoryId;
+    _categoryIds = {...widget.initialCategoryIds};
     _status = widget.initialStatus;
     if (isCustomRange(widget.initialRange)) {
       _isCustom = true;
@@ -524,17 +528,17 @@ class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
   }
 
   bool get _hasActiveFilters =>
-      _categoryId != null ||
+      _categoryIds.isNotEmpty ||
       _isCustom ||
       _quickRange != DateRangeFilter.all ||
       _status != ProjectStatusFilter.ongoing;
 
   void _notify() =>
-      widget.onChanged(_categoryId, _effectiveRange, _status);
+      widget.onChanged(_categoryIds, _effectiveRange, _status);
 
   void _reset() {
     setState(() {
-      _categoryId = null;
+      _categoryIds = {};
       _status = ProjectStatusFilter.ongoing;
       _quickRange = DateRangeFilter.all;
       _isCustom = false;
@@ -577,13 +581,13 @@ class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
     final existing =
         cats.where((c) => c.name.toLowerCase() == name.toLowerCase());
     if (existing.isNotEmpty) {
-      setState(() => _categoryId = existing.first.id);
+      setState(() => _categoryIds = {..._categoryIds, existing.first.id});
       _notify();
       return;
     }
     final row = await ref.read(databaseProvider).addCategory(name);
     if (!mounted) return;
-    setState(() => _categoryId = row.id);
+    setState(() => _categoryIds = {..._categoryIds, row.id});
     _notify();
   }
 
@@ -707,19 +711,20 @@ class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
                   if (cats.isNotEmpty)
                     _Chip(
                       label: 'All',
-                      selected: _categoryId == null,
+                      selected: _categoryIds.isEmpty,
                       onTap: () {
-                        setState(() => _categoryId = null);
+                        setState(_categoryIds.clear);
                         _notify();
                       },
                     ),
                   for (final cat in cats)
                     _Chip(
                       label: cat.name,
-                      selected: _categoryId == cat.id,
+                      selected: _categoryIds.contains(cat.id),
                       onTap: () {
-                        setState(() => _categoryId =
-                            _categoryId == cat.id ? null : cat.id);
+                        setState(() => _categoryIds.contains(cat.id)
+                            ? _categoryIds.remove(cat.id)
+                            : _categoryIds.add(cat.id));
                         _notify();
                       },
                     ),

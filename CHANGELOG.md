@@ -15,6 +15,9 @@ where the signed APKs are attached.
 - Loans settle themselves once repayments cover the principal, and you can still
   settle one early if you forgave the rest
 - Loan cards show what's left when a loan is partly repaid
+- **Filter by several categories at once** on Records, Loans and Projects —
+  tap as many as you like and "All" clears the selection. Totals follow the
+  selection
 
 ### Changed
 - **Borrowed money now raises your balance instead of lowering it.** Cash you

@@ -264,7 +264,10 @@ class AppDatabase extends _$AppDatabase {
     DateTime? from,
     DateTime? to,
     int? limit,
-    String? categoryId,
+    /// Category *filter* — an OR across the chosen categories, ANDed with
+    /// everything else. Distinct from [categoryIdsIn], which is part of the
+    /// free-text search's OR group; empty means "no category filter".
+    List<String>? categoryIds,
     String? query,
     List<String>? categoryIdsIn,
   }) {
@@ -282,8 +285,8 @@ class AppDatabase extends _$AppDatabase {
     if (to != null) {
       q.where((r) => r.occurredAt.isSmallerOrEqualValue(to));
     }
-    if (categoryId != null) {
-      q.where((r) => r.categoryId.equals(categoryId));
+    if (categoryIds != null && categoryIds.isNotEmpty) {
+      q.where((r) => r.categoryId.isIn(categoryIds));
     }
     // Free-text search: ORed across the searchable text columns, then ANDed
     // with every filter above. `type` is a TEXT enum column and is deliberately
