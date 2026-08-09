@@ -18,6 +18,7 @@ void main() async {
   final currency = await settingsRepo.readCurrency();
   final displayName = await settingsRepo.readDisplayName();
   final balanceHidden = await settingsRepo.readBalanceHidden();
+  final reduceTransparency = await settingsRepo.readReduceTransparency();
   final backupPrefs = await backupRepo.read();
 
   runApp(
@@ -29,6 +30,8 @@ void main() async {
             .overrideWith(() => _PrefilledDisplayName(displayName)),
         balanceHiddenProvider
             .overrideWith(() => _PrefilledBalanceHidden(balanceHidden)),
+        reduceTransparencyProvider.overrideWith(
+            () => _PrefilledReduceTransparency(reduceTransparency)),
         backupPrefsProvider
             .overrideWith(() => _PrefilledBackupPrefs(backupPrefs)),
       ],
@@ -46,6 +49,13 @@ class _PrefilledDisplayName extends DisplayNameNotifier {
 
 class _PrefilledBalanceHidden extends BalanceHiddenNotifier {
   _PrefilledBalanceHidden(this.initial);
+  final bool initial;
+  @override
+  bool build() => initial;
+}
+
+class _PrefilledReduceTransparency extends ReduceTransparencyNotifier {
+  _PrefilledReduceTransparency(this.initial);
   final bool initial;
   @override
   bool build() => initial;

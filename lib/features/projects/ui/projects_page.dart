@@ -178,7 +178,9 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
     final cats = ref.watch(categoriesProvider).valueOrNull ?? const [];
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: SearchableAppBar(
+        reduceGlass: ref.watch(reduceTransparencyProvider),
         title: 'Projects',
         animation: _searchAnim,
         controller: _searchController,
@@ -274,7 +276,8 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
               return ListView.builder(
                 key: const ValueKey('proj-list'),
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 120),
+                padding: EdgeInsets.only(
+                    top: MediaQuery.paddingOf(context).top, bottom: 120),
                 itemCount: items.length + 1,
                 itemBuilder: (_, i) {
                   if (i == 0) {
@@ -623,11 +626,7 @@ class _ProjectFilterSheetState extends ConsumerState<_ProjectFilterSheet> {
   Widget build(BuildContext context) {
     final cats = ref.watch(categoriesProvider).valueOrNull ?? [];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+    return GlassSheet(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(

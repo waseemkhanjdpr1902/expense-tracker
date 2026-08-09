@@ -533,11 +533,7 @@ class _AddLoanPaymentSheetState extends ConsumerState<_AddLoanPaymentSheet> {
     final currency = ref.watch(currencyProvider);
     final lent = widget.loan.type == RecordType.loanGiven;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+    return GlassSheet(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
         top: false,

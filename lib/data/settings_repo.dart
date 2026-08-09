@@ -8,6 +8,7 @@ const _kThemeMode = 'theme_mode';
 const _kCurrencyCode = 'currency_code';
 const _kDisplayName = 'display_name';
 const _kBalanceHidden = 'balance_hidden';
+const _kReduceTransparency = 'reduce_transparency';
 
 class SettingsRepo {
   Future<ThemeMode> readThemeMode() async {
@@ -48,6 +49,23 @@ class SettingsRepo {
   Future<void> writeBalanceHidden(bool hidden) async {
     final p = await SharedPreferences.getInstance();
     await p.setBool(_kBalanceHidden, hidden);
+  }
+
+  /// Suppresses the translucent chrome. Defaults to false — glass on.
+  ///
+  /// Apple shipped the equivalent switch in iOS 26.1, after dialling the
+  /// effect back across four betas, and deliberately filed it under Display &
+  /// Brightness rather than Accessibility: how much translucency you want
+  /// turned out to be a matter of taste, not an accommodation. Same reasoning
+  /// here, which is why it sits under Appearance.
+  Future<bool> readReduceTransparency() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getBool(_kReduceTransparency) ?? false;
+  }
+
+  Future<void> writeReduceTransparency(bool reduce) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_kReduceTransparency, reduce);
   }
 }
 
@@ -139,3 +157,17 @@ class BalanceHiddenNotifier extends Notifier<bool> {
 
 final balanceHiddenProvider =
     NotifierProvider<BalanceHiddenNotifier, bool>(BalanceHiddenNotifier.new);
+
+class ReduceTransparencyNotifier extends Notifier<bool> {
+  @override
+  bool build() => false; // overridden in main()
+
+  Future<void> set(bool reduce) async {
+    state = reduce;
+    await ref.read(settingsRepoProvider).writeReduceTransparency(reduce);
+  }
+}
+
+final reduceTransparencyProvider =
+    NotifierProvider<ReduceTransparencyNotifier, bool>(
+        ReduceTransparencyNotifier.new);

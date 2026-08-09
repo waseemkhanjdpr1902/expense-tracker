@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/glass.dart';
 import '../../../core/motion.dart';
 import '../../../core/theme.dart';
 import 'search_expand.dart';
@@ -26,9 +27,14 @@ class SearchableAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onClear,
     required this.actions,
     this.bottom,
+    this.reduceGlass = false,
   });
 
   final String title;
+
+  /// Mirrors the user's Reduce-transparency preference. Passed in rather than
+  /// read here so this stays a plain StatelessWidget.
+  final bool reduceGlass;
 
   /// 0 = collapsed, 1 = fully expanded. Taken as an [Animation] rather than a
   /// double so only this bar rebuilds per frame — a page-level listener would
@@ -65,7 +71,9 @@ class SearchableAppBar extends StatelessWidget implements PreferredSizeWidget {
       reverseCurve: AppMotion.expandReverse,
     );
 
-    return AppBar(
+    return GlassAppBar(
+      disabled: glassDisabled(context, userPreference: reduceGlass),
+      appBar: AppBar(
       automaticallyImplyLeading: false,
       titleSpacing: 20,
       bottom: bottom,
@@ -149,6 +157,7 @@ class SearchableAppBar extends StatelessWidget implements PreferredSizeWidget {
           );
         },
         ),
+      ),
       ),
     );
   }

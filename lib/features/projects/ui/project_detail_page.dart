@@ -382,12 +382,7 @@ class _AddPaymentSheetState extends ConsumerState<_AddPaymentSheet> {
   @override
   Widget build(BuildContext context) {
     final currency = ref.watch(currencyProvider);
-    return Container(
-      decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+    return GlassSheet(
       padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(

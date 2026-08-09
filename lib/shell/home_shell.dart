@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
@@ -7,10 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../core/glass.dart';
 import '../core/haptics.dart';
 import '../core/motion.dart';
 import '../core/theme.dart';
 import '../data/providers.dart';
+import '../data/settings_repo.dart';
 import '../features/backup/data/backup_repo.dart';
 import '../features/backup/data/google_auth.dart';
 import '../features/home/ui/home_page.dart';
@@ -241,6 +242,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
           children: _pages,
         ),
         bottomNavigationBar: _FloatingNavBar(
+          reduceGlass: ref.watch(reduceTransparencyProvider),
           items: _items,
           index: index,
           pageController: _pageController,
@@ -266,11 +268,13 @@ class _FloatingNavBar extends StatefulWidget {
     required this.index,
     required this.pageController,
     required this.onTap,
+    required this.reduceGlass,
   });
   final List<_NavItem> items;
   final int index;
   final PageController pageController;
   final ValueChanged<int> onTap;
+  final bool reduceGlass;
 
   @override
   State<_FloatingNavBar> createState() => _FloatingNavBarState();
@@ -345,47 +349,51 @@ class _FloatingNavBarState extends State<_FloatingNavBar>
     // The bar is LIGHTER than the page in dark mode, which is what makes the
     // blur read as frosted glass sitting above the content. The old
     // `Colors.black @85%` was darker than the page and read as a hole.
-    final barColor = p.barFill;
-    final borderColor = p.barBorder;
     final shadowColor = p.shadow;
+    final noGlass = glassDisabled(context, userPreference: widget.reduceGlass);
 
     final page = _effectivePage;
     double exp(int i) => (1.0 - (page - i).abs()).clamp(0.0, 1.0);
 
+    const radius = BorderRadius.all(Radius.circular(100));
+
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 0, 16, 12 + safePad),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(100),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-          child: Container(
-            height: 64,
-            decoration: BoxDecoration(
-              color: barColor,
-              borderRadius: BorderRadius.circular(100),
-              border: Border.all(color: borderColor, width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: shadowColor,
-                  blurRadius: 24,
-                  spreadRadius: p.isDark ? 0 : 1,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+      child: DecoratedBox(
+        // Shadow lives outside the clip: a BoxShadow painted inside a
+        // ClipRRect is clipped away entirely.
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          boxShadow: [
+            BoxShadow(
+              color: shadowColor,
+              blurRadius: 24,
+              spreadRadius: p.isDark ? 0 : 1,
+              offset: const Offset(0, 6),
             ),
-            padding: const EdgeInsets.all(6),
-            child: Row(
+          ],
+        ),
+        child: GlassSurface(
+          borderRadius: radius,
+          prominence: GlassProminence.bar,
+          disabled: noGlass,
+          child: SizedBox(
+            height: 64,
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Row(
               children: [
-                for (int i = 0; i < widget.items.length; i++)
-                  _NavPill(
-                    item: widget.items[i],
-                    expansion: exp(i),
-                    onTap: () {
-                      AppHaptics.selection();
-                      widget.onTap(i);
-                    },
-                  ),
-              ],
+                  for (int i = 0; i < widget.items.length; i++)
+                    _NavPill(
+                      item: widget.items[i],
+                      expansion: exp(i),
+                      onTap: () {
+                        AppHaptics.selection();
+                        widget.onTap(i);
+                      },
+                    ),
+                ],
+              ),
             ),
           ),
         ),

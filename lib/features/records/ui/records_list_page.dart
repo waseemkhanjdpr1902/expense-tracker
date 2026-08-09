@@ -227,7 +227,11 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
     final isStale = records.isLoading && _lastItems != null;
 
     return Scaffold(
+      // Content passes beneath the glass bar; without this the bar has
+      // nothing to blur and the effect is an expensive flat fill.
+      extendBodyBehindAppBar: true,
       appBar: SearchableAppBar(
+        reduceGlass: ref.watch(reduceTransparencyProvider),
         title: 'Records',
         animation: _searchAnim,
         controller: _searchController,
@@ -272,6 +276,9 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
       body: HeroScope(
         name: 'records',
         child: SafeArea(
+        // top: false — the list applies the inset itself as padding, so
+        // rows scroll *under* the bar instead of stopping below it.
+        top: false,
         bottom: false,
         child: RefreshIndicator(
           color: context.palette.accent,
@@ -334,7 +341,8 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                 key: const ValueKey('rec-list'),
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 120),
+                padding: EdgeInsets.only(
+                    top: MediaQuery.paddingOf(context).top, bottom: 120),
                 itemCount: groups.length + 2,
                 itemBuilder: (_, i) {
                   // ── Totals strip (index 0) ────────────────────────────────
@@ -636,11 +644,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
   Widget build(BuildContext context) {
     final cats = ref.watch(categoriesProvider).valueOrNull ?? [];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+    return GlassSheet(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
