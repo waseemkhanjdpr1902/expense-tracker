@@ -7,6 +7,10 @@ import '../../../core/date_range.dart';
 import '../../../core/formatters.dart';
 import '../../../core/motion.dart';
 import '../../../core/theme.dart';
+import '../../../core/haptics.dart';
+import '../../../core/routes.dart';
+import 'loan_detail_page.dart';
+
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../data/settings_repo.dart';
@@ -15,7 +19,6 @@ import '../../../core/debounce.dart';
 import '../../../core/search_text.dart';
 import '../../search/data/search_providers.dart';
 import '../../search/ui/searchable_app_bar.dart';
-import '../../records/ui/record_form_page.dart';
 import '../../shared/app_sheet.dart';
 import '../../shared/loading.dart';
 import '../../shared/empty_state.dart';
@@ -366,11 +369,21 @@ class _LoanCard extends ConsumerWidget {
         loan.expectedReturnAt != null &&
         loan.expectedReturnAt!.isBefore(DateTime.now());
 
+    // Repaid-to-date comes from one grouped query shared by the whole list,
+    // not a per-card watch — see loanRepaidTotalsProvider.
+    final repaid =
+        ref.watch(loanRepaidTotalsProvider).valueOrNull?[loan.id] ?? 0;
+    final remaining = loan.amountMinor - repaid;
+
     return InkWell(
       borderRadius: BorderRadius.circular(20),
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => RecordFormPage(type: loan.type, existing: loan),
-      )),
+      // Opens the loan rather than the edit form: a loan is now a thing with a
+      // repayment history, and editing it is one action inside that, the same
+      // way a project works. Edit is on the detail page's app bar.
+      onTap: () {
+        AppHaptics.light();
+        AppRoute.push(context, LoanDetailPage(initialLoan: loan));
+      },
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
@@ -426,11 +439,27 @@ class _LoanCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                AnimatedMoney(
-                  minor: loan.amountMinor,
-                  currency: currency,
-                  style: AppTextStyles.title.copyWith(
-                      color: context.ink, fontWeight: FontWeight.w700),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    AnimatedMoney(
+                      minor: loan.amountMinor,
+                      currency: currency,
+                      style: AppTextStyles.title.copyWith(
+                          color: context.ink, fontWeight: FontWeight.w700),
+                    ),
+                    // Only shown once something has actually been repaid — on
+                    // an untouched loan the principal already says everything,
+                    // and a "0 repaid" line would be noise on every card.
+                    if (repaid > 0 && !loan.returned) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '${formatMoney(remaining, currency)} left',
+                        style: AppTextStyles.caption
+                            .copyWith(color: context.palette.accent),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

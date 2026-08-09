@@ -42,8 +42,11 @@ Enable **Install from unknown sources**, then open the file.
 with swipe-to-delete, paginated history and live income / expense / net totals for whatever filter
 is active.
 
-**Loans** — track money lent and borrowed, mark it repaid, and keep the history. Every outstanding
-loan is visible by default, so a debt from six months ago can't quietly scroll off the screen.
+**Loans** — track money lent and borrowed, and settle it **in instalments**. Lend someone 5,000 and
+get it back 2,000 at a time; each repayment goes on a timeline and the outstanding figure is always
+what's still owed, not the original amount. Works the same on money you've borrowed. Every
+outstanding loan is visible by default, so a debt from six months ago can't quietly scroll off the
+screen.
 
 **Projects** — budget, timeline and payment tracking for client work. Payments post as income, so
 they raise your balance and appear in Recent Activity. Completion is an explicit decision rather

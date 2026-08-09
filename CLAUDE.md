@@ -87,7 +87,7 @@ annotation is used anywhere — the only generated file is `database.g.dart`
   persisted setting must be wired in **three** places: the repo, the notifier,
   and the `overrides:` list in `main.dart`.
 
-## Data model (drift, `schemaVersion = 6`)
+## Data model (drift, `schemaVersion = 7`)
 
 | Table | Notes |
 | --- | --- |
@@ -95,6 +95,29 @@ annotation is used anywhere — the only generated file is `database.g.dart`
 | `Categories` | One shared pool used by records *and* projects. Deleting a category nulls out references instead of cascading. |
 | `Projects` | Name, description, category, `totalAmountMinor`, start/end dates, and `completedAt`. **Completion is an explicit user mark, never derived from payments** — a project can be delivered while money is owed, and fully paid while work continues. `null` = ongoing. |
 | `ProjectPayments` | Timeline entries for a project. |
+| `LoanPayments` | Instalments against a loan (`loanId` → `Records.id`). Works both directions: money coming back on what you lent, money you pay off on what you borrowed. |
+
+**Loan instalments are NOT mirrored into `Records`** — the one place they
+deliberately differ from project payments. A project payment is new income
+entering your finances, so it needs a record. A loan repayment is your own money
+returning: minting an income record would inflate lifetime income *and*
+double-count against the balance, since the principal is already carried in
+`outstanding*`. Instalments move the outstanding number instead.
+
+**Outstanding is `principal − repaid`, clamped at zero**, computed in
+`watchStats`. `returned` is still a real flag, not a derivation: `addLoanPayment`
+auto-settles a loan when repayments cover it and `deleteLoanPayment` re-opens it,
+but `markLoanReturned` can settle early (you forgave the rest) and that is never
+overridden. A settled loan is not outstanding at any amount.
+
+`watchStats` therefore combines **two** streams (records + repaid totals). A
+records-only watch leaves the dashboard stale after an instalment.
+
+**`availableBalance` adds borrowed money and subtracts lent money.** Cash you
+borrowed is in your pocket; the debt is real but it is not a reduction in
+spendable cash. It used to subtract borrowed money, which double-counted it —
+harmless while the number could only move once, obviously wrong the moment
+repayments could move it downward.
 
 **The project-payment ↔ income invariant.** Every `ProjectPayments` row has a
 mirrored `Records` row of type `income` whose `projectPaymentId` points back at

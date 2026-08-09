@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:uuid/uuid.dart';
 
 part 'database.g.dart';
@@ -68,8 +69,19 @@ class DashboardStats {
     required this.outstandingBorrowedCount,
   });
 
+  /// Cash you can actually spend right now.
+  ///
+  /// Money you **lent** is subtracted: it left your pocket and hasn't come
+  /// back. Money you **borrowed** is added: it is sitting in your pocket, and
+  /// you owe it — the debt is real but it is not a reduction in available cash.
+  ///
+  /// Borrowed money used to be subtracted here, which double-counted it: the
+  /// cash was never credited on the way in, and then the liability was
+  /// deducted on top. It stayed invisible while the number could only move
+  /// once. Instalments make it obvious — every repayment you made would have
+  /// *raised* your balance, which is backwards — so the sign is fixed here.
   int get availableBalance =>
-      incomeMinor - expenseMinor - outstandingLoanMinor - outstandingBorrowedMinor;
+      incomeMinor - expenseMinor - outstandingLoanMinor + outstandingBorrowedMinor;
 
   static const empty = DashboardStats(
     incomeMinor: 0,
@@ -119,13 +131,39 @@ class ProjectPayments extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Records, Categories, Projects, ProjectPayments])
+/// Instalments against a loan — money coming back on something you lent, or
+/// money you paid back on something you borrowed.
+///
+/// Deliberately **not** mirrored into [Records], which is where this differs
+/// from [ProjectPayments]. A project payment is new income entering your
+/// finances, so it needs a record. A loan repayment is your own money
+/// returning: minting an income record for it would inflate your lifetime
+/// income and double-count against the balance, since the loan principal is
+/// already carried in `outstanding*`. Instalments move the outstanding number
+/// instead — see `watchStats`.
+class LoanPayments extends Table {
+  TextColumn get id => text().clientDefault(() => _uuid.v4())();
+
+  /// The `records.id` of the loan row this repays.
+  TextColumn get loanId => text()();
+  IntColumn get amountMinor => integer()();
+  TextColumn get note => text().nullable()();
+  DateTimeColumn get paidAt => dateTime()();
+  DateTimeColumn get createdAt =>
+      dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(
+    tables: [Records, Categories, Projects, ProjectPayments, LoanPayments])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -171,6 +209,13 @@ class AppDatabase extends _$AppDatabase {
             // decision, so every pre-existing project starts as "Ongoing"
             // even if it is already fully paid.
             await m.addColumn(projects, projects.completedAt);
+          }
+          if (from < 7) {
+            // Loan instalments. No backfill and no data rewrite: a loan that
+            // was already marked returned stays returned, and one that wasn't
+            // simply starts with no instalments, which reads as "nothing
+            // repaid yet" — exactly what it meant before this table existed.
+            await m.createTable(loanPayments);
           }
         },
       );
@@ -310,6 +355,96 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  // ── Loan instalments ────────────────────────────────────────────────────────
+
+  Stream<RecordRow?> watchLoan(String id) =>
+      (select(records)..where((r) => r.id.equals(id))).watchSingleOrNull();
+
+  Stream<List<LoanPayment>> watchLoanPayments(String loanId) =>
+      (select(loanPayments)
+            ..where((p) => p.loanId.equals(loanId))
+            ..orderBy([(p) => OrderingTerm.asc(p.paidAt)]))
+          .watch();
+
+  /// Total repaid per loan id, for every loan at once.
+  ///
+  /// One grouped query rather than one per row: the loans list renders every
+  /// outstanding loan, and a per-row query would be N subscriptions that all
+  /// re-fire on any write.
+  Stream<Map<String, int>> watchRepaidTotals() {
+    final loanId = loanPayments.loanId;
+    final total = loanPayments.amountMinor.sum();
+    final q = selectOnly(loanPayments)
+      ..addColumns([loanId, total])
+      ..groupBy([loanId]);
+    return q.watch().map((rows) => {
+          for (final row in rows) row.read(loanId)!: row.read(total) ?? 0,
+        });
+  }
+
+  /// Adds an instalment and, when the loan is now fully covered, marks it
+  /// settled in the same transaction.
+  ///
+  /// Auto-settling is a convenience, not a derivation: [markLoanReturned] can
+  /// still settle a loan early (you forgave the rest) or re-open one, and this
+  /// never contradicts that — it only fires on the transition into fully-paid.
+  Future<void> addLoanPayment({
+    required String loanId,
+    required int amountMinor,
+    String? note,
+    required DateTime paidAt,
+  }) async {
+    await transaction(() async {
+      await into(loanPayments).insert(
+        LoanPaymentsCompanion.insert(
+          loanId: loanId,
+          amountMinor: amountMinor,
+          note: Value(note),
+          paidAt: paidAt,
+        ),
+      );
+      await _settleIfCovered(loanId);
+    });
+  }
+
+  Future<void> deleteLoanPayment(String paymentId) async {
+    await transaction(() async {
+      final pay = await (select(loanPayments)
+            ..where((p) => p.id.equals(paymentId)))
+          .getSingleOrNull();
+      if (pay == null) return;
+      await (delete(loanPayments)..where((p) => p.id.equals(paymentId))).go();
+      // Removing an instalment can drop a settled loan back below its
+      // principal, so the settled mark has to be re-evaluated both ways.
+      await _settleIfCovered(pay.loanId);
+    });
+  }
+
+  /// Sum of instalments against one loan.
+  Future<int> repaidTotal(String loanId) async {
+    final total = loanPayments.amountMinor.sum();
+    final row = await (selectOnly(loanPayments)
+          ..addColumns([total])
+          ..where(loanPayments.loanId.equals(loanId)))
+        .getSingle();
+    return row.read(total) ?? 0;
+  }
+
+  Future<void> _settleIfCovered(String loanId) async {
+    final loan = await (select(records)..where((r) => r.id.equals(loanId)))
+        .getSingleOrNull();
+    if (loan == null) return;
+    final repaid = await repaidTotal(loanId);
+    final covered = repaid >= loan.amountMinor;
+    if (covered == loan.returned) return;
+    await (update(records)..where((r) => r.id.equals(loanId))).write(
+      RecordsCompanion(
+        returned: Value(covered),
+        returnedAt: Value(covered ? DateTime.now() : null),
+      ),
+    );
+  }
+
   Stream<List<CategoryRow>> watchCategories() =>
       (select(categories)..orderBy([(c) => OrderingTerm.asc(c.name)])).watch();
 
@@ -335,7 +470,11 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Stream<DashboardStats> watchStats() {
-    return select(records).watch().map((rows) {
+    // Two streams because outstanding is now `principal - repaid`: the numbers
+    // have to recompute when either side moves, and a record-only watch would
+    // leave the dashboard stale after an instalment.
+    return Rx.combineLatest2<List<RecordRow>, Map<String, int>, DashboardStats>(
+        select(records).watch(), watchRepaidTotals(), (rows, repaidBy) {
       final now = DateTime.now();
       final monthStart = DateTime(now.year, now.month, 1);
       final nextMonth = DateTime(now.year, now.month + 1, 1);
@@ -359,16 +498,25 @@ class AppDatabase extends _$AppDatabase {
               monthExp += r.amountMinor;
             }
             break;
+          // Outstanding is what is *still* owed. Clamped at zero so an
+          // overpayment can't turn into negative debt and quietly inflate the
+          // balance; the surplus is the loan's business, not the dashboard's.
           case RecordType.loanGiven:
             if (!r.returned) {
-              outLoan += r.amountMinor;
-              outCount += 1;
+              final left = r.amountMinor - (repaidBy[r.id] ?? 0);
+              if (left > 0) {
+                outLoan += left;
+                outCount += 1;
+              }
             }
             break;
           case RecordType.loanTaken:
             if (!r.returned) {
-              outBorrowed += r.amountMinor;
-              outBorrowedCount += 1;
+              final left = r.amountMinor - (repaidBy[r.id] ?? 0);
+              if (left > 0) {
+                outBorrowed += left;
+                outBorrowedCount += 1;
+              }
             }
             break;
         }

@@ -199,6 +199,25 @@ final projectPaymentsProvider =
       ref.watch(databaseProvider).watchProjectPayments(projectId),
 );
 
+// ── Loan instalments ─────────────────────────────────────────────────────────
+
+/// A single loan, live — the detail page's source of truth, so an instalment
+/// or a settle toggle refreshes in place.
+final loanByIdProvider = StreamProvider.family<RecordRow?, String>(
+    (ref, id) => ref.watch(databaseProvider).watchLoan(id));
+
+final loanPaymentsProvider = StreamProvider.family<List<LoanPayment>, String>(
+  (ref, loanId) => ref.watch(databaseProvider).watchLoanPayments(loanId),
+);
+
+/// Repaid-to-date for every loan, keyed by loan id.
+///
+/// One grouped query shared by the whole list rather than a family keyed by
+/// loan id: the loans page renders every outstanding loan, so a family would
+/// mean N subscriptions all re-firing on any write.
+final loanRepaidTotalsProvider = StreamProvider<Map<String, int>>(
+    (ref) => ref.watch(databaseProvider).watchRepaidTotals());
+
 /// projectId → total payments received (minor units). Feeds the Projects board.
 final receivedByProjectProvider = StreamProvider<Map<String, int>>(
     (ref) => ref.watch(databaseProvider).watchReceivedByProject());

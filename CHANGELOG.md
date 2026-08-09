@@ -3,6 +3,37 @@
 All notable changes to Xpense Tracker. Each version links to its GitHub release,
 where the signed APKs are attached.
 
+## Unreleased
+
+### Added
+- **Loan instalments.** Lend someone 5,000 and get it back 2,000 at a time — each
+  repayment is recorded against the loan, with the same payment-timeline screen
+  projects use. Works in both directions: repayments you receive on money you
+  lent, and repayments you make on money you borrowed
+- Outstanding is now **what's still owed**, not the full principal, everywhere it
+  appears — the loans list, the home summary and the balance
+- Loans settle themselves once repayments cover the principal, and you can still
+  settle one early if you forgave the rest
+- Loan cards show what's left when a loan is partly repaid
+
+### Changed
+- **Borrowed money now raises your balance instead of lowering it.** Cash you
+  borrowed is in your pocket — the debt is real, but it isn't a reduction in what
+  you can spend. The old formula subtracted it, which double-counted: the cash
+  was never credited on the way in, then the liability was deducted on top.
+  **Your balance will change when you update**, by twice the total you have
+  outstanding on borrowed loans
+- Tapping a loan opens the loan instead of the edit form; edit is on its app bar
+- **The dark theme is deeper and no longer grey.** Rebuilt on a cool-tinted
+  near-black (`#090C12`) with surfaces stepping 5-8% at a time. Contrast is
+  unchanged at ~14:1, so it reads richer without becoming harsh
+- Database schema 6 → 7. Existing loans are untouched and simply start with no
+  instalments recorded
+
+### Fixed
+- Opening a project from global search flashed the page and bounced straight
+  back to the results
+
 ## [v1.0.3](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.3)
 
 > **Breaking for existing installs.** This release is signed with a new release key, so Android
