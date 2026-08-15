@@ -19,7 +19,6 @@ void main() async {
   final currency = await settingsRepo.readCurrency();
   final displayName = await settingsRepo.readDisplayName();
   final balanceHidden = await settingsRepo.readBalanceHidden();
-  final reduceTransparency = await settingsRepo.readReduceTransparency();
   final backupPrefs = await backupRepo.read();
   // Compiled before the first frame so the chrome never pops from flat blur to
   // refracted glass on launch. Failure is non-fatal; the blur path stands in.
@@ -34,8 +33,6 @@ void main() async {
             .overrideWith(() => _PrefilledDisplayName(displayName)),
         balanceHiddenProvider
             .overrideWith(() => _PrefilledBalanceHidden(balanceHidden)),
-        reduceTransparencyProvider.overrideWith(
-            () => _PrefilledReduceTransparency(reduceTransparency)),
         backupPrefsProvider
             .overrideWith(() => _PrefilledBackupPrefs(backupPrefs)),
       ],
@@ -53,13 +50,6 @@ class _PrefilledDisplayName extends DisplayNameNotifier {
 
 class _PrefilledBalanceHidden extends BalanceHiddenNotifier {
   _PrefilledBalanceHidden(this.initial);
-  final bool initial;
-  @override
-  bool build() => initial;
-}
-
-class _PrefilledReduceTransparency extends ReduceTransparencyNotifier {
-  _PrefilledReduceTransparency(this.initial);
   final bool initial;
   @override
   bool build() => initial;

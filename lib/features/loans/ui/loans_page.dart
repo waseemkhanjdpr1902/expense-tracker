@@ -176,7 +176,6 @@ class _LoansPageState extends ConsumerState<LoansPage>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: SearchableAppBar(
-        reduceGlass: ref.watch(reduceTransparencyProvider),
         title: 'Loans',
         animation: _searchAnim,
         controller: _searchController,

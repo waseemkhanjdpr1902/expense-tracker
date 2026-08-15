@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/currency.dart';
 import '../../../core/motion.dart';
 import '../../../core/glass.dart';
-import '../../../core/haptics.dart';
 import '../../../core/theme.dart';
 import '../../../data/dev_seed.dart';
 import '../../../data/onboarding_repo.dart';
@@ -22,12 +21,11 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(themeModeProvider);
     final currency = ref.watch(currencyProvider);
-    final reduceGlass = ref.watch(reduceTransparencyProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: GlassAppBar(
-        disabled: glassDisabled(context, userPreference: reduceGlass),
+        disabled: glassDisabled(context),
         appBar: AppBar(title: const Text('Settings')),
       ),
       body: SafeArea(
@@ -46,30 +44,6 @@ class SettingsPage extends ConsumerWidget {
                 title: 'Theme',
                 subtitle: _themeLabel(mode),
                 onTap: () => _openThemeSheet(context, ref, mode),
-              ),
-              // Apple put the equivalent switch under Display & Brightness
-              // rather than Accessibility, having concluded that how much
-              // translucency you want is taste, not an accommodation. Same
-              // placement logic: this belongs beside Theme.
-              _Tile(
-                icon: Icons.blur_on_rounded,
-                title: 'Reduce transparency',
-                subtitle: reduceGlass
-                    ? 'Bars and sheets are solid'
-                    : 'Bars and sheets blur what is behind them',
-                trailing: Switch(
-                  value: reduceGlass,
-                  onChanged: (v) {
-                    AppHaptics.selection();
-                    ref.read(reduceTransparencyProvider.notifier).set(v);
-                  },
-                ),
-                onTap: () {
-                  AppHaptics.selection();
-                  ref
-                      .read(reduceTransparencyProvider.notifier)
-                      .set(!reduceGlass);
-                },
               ),
             ]),
             const SizedBox(height: 16),

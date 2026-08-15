@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/glass.dart';
 import '../../core/motion.dart';
 import '../../core/theme.dart';
-import '../../data/settings_repo.dart';
 
 /// One chrome for every bottom sheet.
 ///
@@ -65,8 +64,7 @@ class GlassSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final noGlass = glassDisabled(context,
-        userPreference: ref.watch(reduceTransparencyProvider));
+    final noGlass = glassDisabled(context);
 
     return GlassSurface(
       borderRadius:

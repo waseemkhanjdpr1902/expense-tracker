@@ -11,7 +11,6 @@ import '../core/haptics.dart';
 import '../core/motion.dart';
 import '../core/theme.dart';
 import '../data/providers.dart';
-import '../data/settings_repo.dart';
 import '../features/backup/data/backup_repo.dart';
 import '../features/backup/data/google_auth.dart';
 import '../features/home/ui/home_page.dart';
@@ -242,7 +241,6 @@ class _HomeShellState extends ConsumerState<HomeShell>
           children: _pages,
         ),
         bottomNavigationBar: _FloatingNavBar(
-          reduceGlass: ref.watch(reduceTransparencyProvider),
           items: _items,
           index: index,
           pageController: _pageController,
@@ -268,13 +266,11 @@ class _FloatingNavBar extends StatefulWidget {
     required this.index,
     required this.pageController,
     required this.onTap,
-    required this.reduceGlass,
   });
   final List<_NavItem> items;
   final int index;
   final PageController pageController;
   final ValueChanged<int> onTap;
-  final bool reduceGlass;
 
   @override
   State<_FloatingNavBar> createState() => _FloatingNavBarState();
@@ -350,7 +346,7 @@ class _FloatingNavBarState extends State<_FloatingNavBar>
     // blur read as frosted glass sitting above the content. The old
     // `Colors.black @85%` was darker than the page and read as a hole.
     final shadowColor = p.shadow;
-    final noGlass = glassDisabled(context, userPreference: widget.reduceGlass);
+    final noGlass = glassDisabled(context);
 
     final page = _effectivePage;
     double exp(int i) => (1.0 - (page - i).abs()).clamp(0.0, 1.0);

@@ -27,14 +27,12 @@ class SearchableAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onClear,
     required this.actions,
     this.bottom,
-    this.reduceGlass = false,
   });
 
   final String title;
 
   /// Mirrors the user's Reduce-transparency preference. Passed in rather than
   /// read here so this stays a plain StatelessWidget.
-  final bool reduceGlass;
 
   /// 0 = collapsed, 1 = fully expanded. Taken as an [Animation] rather than a
   /// double so only this bar rebuilds per frame — a page-level listener would
@@ -72,7 +70,7 @@ class SearchableAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
 
     return GlassAppBar(
-      disabled: glassDisabled(context, userPreference: reduceGlass),
+      disabled: glassDisabled(context),
       appBar: AppBar(
       automaticallyImplyLeading: false,
       titleSpacing: 20,

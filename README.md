@@ -64,9 +64,11 @@ on another device, and restores in place without an app restart.
 
 **Design** — Material 3 in light and dark, with the dark theme built on a cool-tinted near-black
 rather than flat grey. App bars, the nav bar and sheets are **glass**: your content blurs through
-them as it scrolls past. Deliberately limited to navigation — nothing you need to read ever sits on
-a translucent surface, and a **Reduce transparency** switch makes it all solid. Plus iOS-style
-navigation, haptics, and category glyphs derived from category names.
+them as it scrolls past, and bends at their edges the way it would through a real pane, drawn by a
+fragment shader. Deliberately limited to navigation — nothing you need to read ever sits on a
+translucent surface, and the effect turns itself off if you've asked Android for high contrast or an
+accessible navigation mode. Plus iOS-style navigation, haptics, and category glyphs derived from
+category names.
 
 **Xpy** — a code-drawn pixel cat on the home screen whose mood follows your month's net.
 

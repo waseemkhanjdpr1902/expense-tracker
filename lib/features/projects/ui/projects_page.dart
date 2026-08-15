@@ -180,7 +180,6 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: SearchableAppBar(
-        reduceGlass: ref.watch(reduceTransparencyProvider),
         title: 'Projects',
         animation: _searchAnim,
         controller: _searchController,

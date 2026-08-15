@@ -285,8 +285,31 @@ moved out of `SafeArea` into the scroll view's padding — with `SafeArea(top:
 true)` rows stop below the bar instead of passing under it, and glass with
 nothing behind it is an expensive flat fill.
 
-`reduceTransparencyProvider` (Settings → Appearance) and the OS high-contrast /
-accessible-navigation flags both force the opaque path.
+**Glass is always on. There is no in-app switch**, and don't reintroduce one —
+it existed, and the only thing it reliably did was leave the effect switched off
+on a device by accident. The opaque path is now reached solely through the OS
+high-contrast / accessible-navigation flags, which are an accommodation rather
+than taste: someone who asked the system for high contrast asked every app on
+it. `glassDisabled(context)` reads those and nothing else.
+
+**Refraction — `shaders/liquid_glass.frag`.** The blur alone reads as frosted,
+not as a solid pane; what sells the solid is light bending at the edge. The
+shader treats the surface as a rounded-rect SDF, takes the normal from its
+gradient, and displaces the backdrop lookup along that normal with a weight that
+is zero in the centre and peaks just inside the rim. It also draws the specular
+highlight, so `_GlassPainter` skips its own rim whenever refraction is active.
+
+Order is blur → bend, composed into one `ImageFilter`: refracting a *sharp*
+backdrop shows the displacement as a seam instead of as thickness. Keep the
+distortion in the edge band — warping the whole surface is Apple's `clear`
+variant, and over a screen of numbers it fights the text.
+
+`ImageFilter.shader` requires Impeller, so `LiquidGlassProgram.ensureLoaded()`
+runs before the first frame in `main()` and a failure leaves the program null,
+which drops every surface back to the plain blur plus painted rim. `GlassSurface`
+is stateful purely to own one `FragmentShader` for its lifetime —
+`fragmentShader()` allocates GPU-side memory and the widget rebuilds while the
+list behind it scrolls.
 
 ## Conventions
 

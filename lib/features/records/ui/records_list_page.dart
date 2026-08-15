@@ -231,7 +231,6 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
       // nothing to blur and the effect is an expensive flat fill.
       extendBodyBehindAppBar: true,
       appBar: SearchableAppBar(
-        reduceGlass: ref.watch(reduceTransparencyProvider),
         title: 'Records',
         animation: _searchAnim,
         controller: _searchController,

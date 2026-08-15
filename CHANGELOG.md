@@ -5,6 +5,18 @@ where the signed APKs are attached.
 
 ## Unreleased
 
+### Added
+- **Glass now refracts.** Content passing the edge of a bar or sheet bends the
+  way it would through a real pane of glass, instead of only blurring. The
+  centre stays undistorted, so anything scrolling under the middle of a bar is
+  still readable
+
+### Changed
+- **Glass is always on**, and the **Reduce transparency** switch is gone. It
+  mostly served to leave the effect turned off by accident. Bars and sheets
+  still go solid automatically if you've asked Android for high contrast or an
+  accessible navigation mode
+
 ### Fixed
 - The summary board on Records and Projects, and the first row of Settings, no
   longer start underneath the app bar — Records and Settings were hidden behind

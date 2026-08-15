@@ -172,16 +172,15 @@ Color glassFill(AppPalette p, GlassProminence prominence) {
 
 /// Whether translucency should be suppressed for this frame.
 ///
-/// Apple shipped exactly this control in iOS 26.1 after walking the effect back
-/// across four betas — and put it in **Display & Brightness, not
-/// Accessibility**, having concluded it is a mainstream preference rather than
-/// an accommodation. [reduceTransparencyProvider] mirrors that; this function
-/// additionally honours the OS-level accessibility flags.
-bool glassDisabled(BuildContext context, {bool userPreference = false}) {
+/// There is deliberately no in-app preference. Glass is always on; the only
+/// thing that turns it off is the OS telling us the person using the device
+/// needs it off. Those flags are an accommodation, not taste — someone who has
+/// asked the system for high contrast or an accessible navigation mode has
+/// asked every app on it, and an app that paints translucent chrome anyway is
+/// ignoring them.
+bool glassDisabled(BuildContext context) {
   final mq = MediaQuery.maybeOf(context);
-  return userPreference ||
-      (mq?.highContrast ?? false) ||
-      (mq?.accessibleNavigation ?? false);
+  return (mq?.highContrast ?? false) || (mq?.accessibleNavigation ?? false);
 }
 
 /// A translucent chrome surface.
