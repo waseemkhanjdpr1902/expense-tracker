@@ -96,17 +96,17 @@ abstract final class GlassTuning {
   /// a narrow one as a sheet. It stays a band rather than the whole surface on
   /// purpose — full-surface warping is Apple's `clear` variant, prescribed for
   /// media backdrops, and over a list of numbers it fights the text.
-  static const double edgeBand = 22;
+  static const double edgeBand = 28;
 
   /// How far the rim displaces its backdrop lookup at full strength, in logical
   /// pixels. This is the single dial for "how much glass". Past ~14 the edge
   /// starts to smear rather than bend.
-  static const double refraction = 9;
+  static const double refraction = 18;
 
   /// Specular rim intensity. The shader draws this instead of [_GlassPainter]'s
   /// gradient stroke when refraction is active, because it can place the
   /// highlight against the true surface normal rather than a vertical ramp.
-  static const double specular = 0.16;
+  static const double specular = 0.30;
 }
 
 /// The compiled refraction program, or null if it could not be loaded.
