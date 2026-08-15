@@ -59,8 +59,18 @@ abstract final class GlassTuning {
 
   /// Opacity of the tint fill over the blurred backdrop. High enough that
   /// contrast is governed by the fill — see the class doc.
+  ///
+  /// The two themes have different floors because their labels do. Dark's
+  /// label is `#EBEBF5`, which washes out over a bright backdrop, so the fill
+  /// has to stay thick enough to bound the spread — 0.70 is where that guard
+  /// breaks, and 0.76 sits just above it. Light's label is pure black, which
+  /// survives even a dark backdrop (5.3:1 at alpha 0.50), so the same
+  /// guarantee costs far less opacity there. At 0.88 only 12% of the blurred
+  /// backdrop showed and the bar read as flat white; 0.72 more than doubles
+  /// that while leaving the label at 10.5:1 over the darkest possible
+  /// backdrop.
   static const double fillAlphaDark = 0.76;
-  static const double fillAlphaLight = 0.88;
+  static const double fillAlphaLight = 0.72;
 
   /// Sheets sit over frozen content and cover more area, so they can afford to
   /// be — and per Apple should be — more opaque still.
