@@ -341,8 +341,11 @@ class _RecordsListPageState extends ConsumerState<RecordsListPage>
                 key: const ValueKey('rec-list'),
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
+                // Status bar inset *plus* the toolbar: rows still scroll under
+                // the glass bar, but at rest the first one clears it.
                 padding: EdgeInsets.only(
-                    top: MediaQuery.paddingOf(context).top, bottom: 120),
+                    top: MediaQuery.paddingOf(context).top + kToolbarHeight,
+                    bottom: 120),
                 itemCount: groups.length + 2,
                 itemBuilder: (_, i) {
                   // ── Totals strip (index 0) ────────────────────────────────

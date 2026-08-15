@@ -34,8 +34,11 @@ class SettingsPage extends ConsumerWidget {
         top: false,
         bottom: false,
         child: ListView(
+          // Status bar inset *plus* the toolbar: rows still scroll under the
+          // glass bar, but at rest the first one clears it.
           padding: EdgeInsets.fromLTRB(
-              20, MediaQuery.paddingOf(context).top + 8, 20, 120),
+              20, MediaQuery.paddingOf(context).top + kToolbarHeight + 8, 20,
+              120),
           children: [
             _Section(title: 'Appearance', children: [
               _Tile(

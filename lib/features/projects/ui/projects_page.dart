@@ -227,6 +227,9 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
       body: HeroScope(
         name: 'projects',
         child: SafeArea(
+        // top: false — the list applies the inset itself as padding, so
+        // cards scroll *under* the bar instead of stopping below it.
+        top: false,
         bottom: false,
         child: RefreshIndicator(
           color: context.palette.accent,
@@ -276,8 +279,11 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage>
               return ListView.builder(
                 key: const ValueKey('proj-list'),
                 physics: const AlwaysScrollableScrollPhysics(),
+                // Status bar inset *plus* the toolbar: cards still scroll under
+                // the glass bar, but at rest the first one clears it.
                 padding: EdgeInsets.only(
-                    top: MediaQuery.paddingOf(context).top, bottom: 120),
+                    top: MediaQuery.paddingOf(context).top + kToolbarHeight,
+                    bottom: 120),
                 itemCount: items.length + 1,
                 itemBuilder: (_, i) {
                   if (i == 0) {
