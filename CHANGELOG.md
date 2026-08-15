@@ -3,7 +3,9 @@
 All notable changes to Xpense Tracker. Each version links to its GitHub release,
 where the signed APKs are attached.
 
-## Unreleased
+## [v1.0.5](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.5)
+
+> Installs straight over v1.0.4 — no uninstall, nothing to back up first.
 
 ### Added
 - **Glass now refracts.** Content passing the edge of a bar or sheet bends the
