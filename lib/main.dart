@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'core/currency.dart';
+import 'core/glass.dart';
 import 'data/settings_repo.dart';
 import 'features/backup/data/backup_prefs.dart';
 
@@ -20,6 +21,9 @@ void main() async {
   final balanceHidden = await settingsRepo.readBalanceHidden();
   final reduceTransparency = await settingsRepo.readReduceTransparency();
   final backupPrefs = await backupRepo.read();
+  // Compiled before the first frame so the chrome never pops from flat blur to
+  // refracted glass on launch. Failure is non-fatal; the blur path stands in.
+  await LiquidGlassProgram.ensureLoaded();
 
   runApp(
     ProviderScope(

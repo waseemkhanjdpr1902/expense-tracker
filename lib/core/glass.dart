@@ -89,6 +89,49 @@ abstract final class GlassTuning {
   static const double noiseAlpha = 0.025;
   static const int noiseTile = 64;
 
+  /// ── Refraction ─────────────────────────────────────────────────────────
+  ///
+  /// How wide the refracting band is, inward from the edge, in logical pixels.
+  /// This is the apparent *thickness* of the pane: a wide band reads as a slab,
+  /// a narrow one as a sheet. It stays a band rather than the whole surface on
+  /// purpose — full-surface warping is Apple's `clear` variant, prescribed for
+  /// media backdrops, and over a list of numbers it fights the text.
+  static const double edgeBand = 22;
+
+  /// How far the rim displaces its backdrop lookup at full strength, in logical
+  /// pixels. This is the single dial for "how much glass". Past ~14 the edge
+  /// starts to smear rather than bend.
+  static const double refraction = 9;
+
+  /// Specular rim intensity. The shader draws this instead of [_GlassPainter]'s
+  /// gradient stroke when refraction is active, because it can place the
+  /// highlight against the true surface normal rather than a vertical ramp.
+  static const double specular = 0.16;
+}
+
+/// The compiled refraction program, or null if it could not be loaded.
+///
+/// Loaded once from `main()`. Everything degrades to the plain blur if this
+/// stays null: `ImageFilter.shader` needs Impeller, and an app that cannot
+/// compile the program must still render its chrome.
+abstract final class LiquidGlassProgram {
+  static ui.FragmentProgram? _program;
+  static bool _tried = false;
+
+  static ui.FragmentProgram? get program => _program;
+
+  /// Safe to call more than once; only the first call does work.
+  static Future<void> ensureLoaded() async {
+    if (_tried) return;
+    _tried = true;
+    try {
+      _program = await ui.FragmentProgram.fromAsset('shaders/liquid_glass.frag');
+    } catch (e) {
+      // Non-fatal by design — the blur path is a complete fallback.
+      debugPrint('liquid glass shader unavailable, using plain blur: $e');
+      _program = null;
+    }
+  }
 }
 
 extension GlassProminenceX on GlassProminence {
@@ -146,7 +189,7 @@ bool glassDisabled(BuildContext context, {bool userPreference = false}) {
 /// Layer order matters and matches the material: blurred+saturated backdrop,
 /// tint, dither, rim, child. The whole thing is clipped first — an unclipped
 /// [BackdropFilter] samples the entire layer tree behind it.
-class GlassSurface extends StatelessWidget {
+class GlassSurface extends StatefulWidget {
   const GlassSurface({
     super.key,
     required this.child,
@@ -168,45 +211,125 @@ class GlassSurface extends StatelessWidget {
   final bool rim;
 
   @override
+  State<GlassSurface> createState() => _GlassSurfaceState();
+}
+
+class _GlassSurfaceState extends State<GlassSurface> {
+  /// Held for the life of the surface rather than rebuilt per frame.
+  /// [ui.FragmentProgram.fragmentShader] allocates a native shader, and this
+  /// widget rebuilds while the list behind it scrolls — minting one per frame
+  /// and dropping it leaks GPU-side memory for as long as the app runs.
+  ui.FragmentShader? _shader;
+
+  ui.FragmentShader? get _refractionShader {
+    if (_shader != null) return _shader;
+    final program = LiquidGlassProgram.program;
+    if (program == null) return null;
+    return _shader = program.fragmentShader();
+  }
+
+  @override
+  void dispose() {
+    _shader?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final fill = glassFill(p, prominence);
+    final fill = glassFill(p, widget.prominence);
 
-    if (disabled) {
+    if (widget.disabled) {
       // Opaque, deterministic, and no save-layer.
       return DecoratedBox(
         decoration: BoxDecoration(
           color: Color.alphaBlend(fill, p.bgBase),
-          borderRadius: borderRadius,
+          borderRadius: widget.borderRadius,
           border: Border.all(color: p.barBorder, width: 1),
         ),
-        child: child,
+        child: widget.child,
       );
     }
 
+    final dark = p.brightness == Brightness.dark;
+
     return ClipRRect(
-      borderRadius: borderRadius,
-      child: BackdropFilter(
-        // Composed into ONE filter. Nesting two BackdropFilters would cost a
-        // second full-screen save-layer for no visual gain.
-        filter: ui.ImageFilter.compose(
-          outer: ColorFilter.matrix(_saturate(GlassTuning.saturation)),
-          inner: ui.ImageFilter.blur(
-            sigmaX: prominence.sigma,
-            sigmaY: prominence.sigma,
-          ),
-        ),
-        child: CustomPaint(
-          painter: _GlassPainter(
-            fill: fill,
-            dark: p.brightness == Brightness.dark,
-            radius: borderRadius,
-            drawRim: rim,
-          ),
-          child: child,
-        ),
+      borderRadius: widget.borderRadius,
+      child: Builder(
+        builder: (context) {
+          // The shader works in the filter input's pixels, so radius and band
+          // widths have to be scaled out of logical units.
+          final dpr = MediaQuery.devicePixelRatioOf(context);
+          final refract = _refractionFilter(
+            shader: _refractionShader,
+            dpr: dpr,
+            radius: widget.borderRadius.topLeft.x,
+            // A full-bleed bar's side edges run off-screen; bending light at a
+            // seam that isn't there reads as a floating card, not as chrome.
+            specular: widget.rim ? GlassTuning.specular : 0,
+            dark: dark,
+          );
+
+          // Composed into ONE filter. Nesting BackdropFilters would cost a
+          // second full-screen save-layer for no visual gain.
+          ui.ImageFilter filter = ui.ImageFilter.compose(
+            outer: ColorFilter.matrix(_saturate(GlassTuning.saturation)),
+            inner: ui.ImageFilter.blur(
+              sigmaX: widget.prominence.sigma,
+              sigmaY: widget.prominence.sigma,
+            ),
+          );
+          if (refract != null) {
+            // Blur first, then bend: refracting a sharp backdrop shows the
+            // displacement as a visible seam rather than as thickness.
+            filter = ui.ImageFilter.compose(outer: refract, inner: filter);
+          }
+
+          return BackdropFilter(
+            filter: filter,
+            child: CustomPaint(
+              painter: _GlassPainter(
+                fill: fill,
+                dark: dark,
+                radius: widget.borderRadius,
+                // The shader already lit the rim against the true surface
+                // normal; drawing the gradient stroke too would double it.
+                drawRim: widget.rim && refract == null,
+              ),
+              child: widget.child,
+            ),
+          );
+        },
       ),
     );
+  }
+}
+
+/// The refraction filter, or null when the program is unavailable — in which
+/// case [GlassSurface] keeps the plain blur and its painted rim.
+ui.ImageFilter? _refractionFilter({
+  required ui.FragmentShader? shader,
+  required double dpr,
+  required double radius,
+  required double specular,
+  required bool dark,
+}) {
+  if (shader == null) return null;
+  try {
+    // Slots 0–1 are the vec2 size; the engine overwrites them with the bound
+    // texture's dimensions, but they must exist for the filter to validate.
+    shader.setFloat(0, 0);
+    shader.setFloat(1, 0);
+    shader.setFloat(2, radius * dpr);
+    shader.setFloat(3, GlassTuning.edgeBand * dpr);
+    shader.setFloat(4, GlassTuning.refraction * dpr);
+    shader.setFloat(5, specular);
+    shader.setFloat(6, dark ? 1.0 : 0.0);
+    return ui.ImageFilter.shader(shader);
+  } catch (e) {
+    // Impeller off, or a driver that rejected the program.
+    debugPrint('liquid glass filter unavailable: $e');
+    return null;
   }
 }
 
