@@ -3,6 +3,17 @@
 All notable changes to Xpense Tracker. Each version links to its GitHub release,
 where the signed APKs are attached.
 
+## Unreleased
+
+### Fixed
+- The summary board on Records and Projects, and the first row of Settings, no
+  longer start underneath the app bar — Records and Settings were hidden behind
+  it, Projects had a gap of empty space instead. They still scroll under the
+  bar; they just no longer begin there
+- **Glass now actually looks like glass in light mode.** The tint over the blur
+  was opaque enough that only a little of what sits behind a bar came through,
+  so bars read as flat white. Dark mode is unchanged
+
 ## [v1.0.4](https://github.com/saranzafar/expense-tracker-flutter-mobile-app/releases/tag/v1.0.4)
 
 > Installs straight over v1.0.3 — no uninstall, nothing to back up first.
